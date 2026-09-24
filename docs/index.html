@@ -275,7 +275,7 @@ function update(dt){
   updateParts(dt);
   if(net&&net.role==='guest'){guestTick(dt);return;}
   if(over||!running)return;
-  time-=dt;
+  if(!sudden)time-=dt;
   if(!crown.active&&time<=CROWN_AT){crown.active=true;pop(640,300,'THE CROWN IS OPEN',true);say('Hold the Well for 10 seconds to win outright');say2('Hold the Well for 10 seconds to win outright');shake=Math.max(shake,6);beep(400,900,.6,'triangle',.08);}
   if(time<=0&&!sudden){time=0;const a=nodes.filter(n=>n.owner===1).length,b=nodes.filter(n=>n.owner===2).length;if(a!==b)return endGame(a>b?1:2,'time');sudden=true;say('OVERTIME: the next capture wins');say2('OVERTIME: the next capture wins');}
   const h=heroes[1];
