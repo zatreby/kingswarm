@@ -686,9 +686,11 @@ renderMeta();renderPick();
 mode='practice';reset();
 window.__ks=()=>({mode,me,running,over,time:+time.toFixed(1),critters:critters.length,h1:[heroes[1].x|0,heroes[1].y|0,heroes[1].hp|0],h2:[heroes[2].x|0,heroes[2].y|0,heroes[2].hp|0],huts:[nodes.filter(n=>n.owner===1).length,nodes.filter(n=>n.owner===2).length],net:net?net.role:null});
 let last=performance.now();
-function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;if(freeze>0){freeze-=dt;}else update(dt);
-  if(net&&net.role==='host'&&net.conn&&running&&!over){net.acc+=dt;if(net.acc>=1/15){net.acc=0;try{net.conn.send(snapshot());}catch(e){}}}
-  draw();requestAnimationFrame(frame);}
+function step(now){const dt=Math.min(.05,(now-last)/1000);last=now;if(freeze>0){freeze-=dt;}else update(dt);
+  if(net&&net.role==='host'&&net.conn&&running&&!over){net.acc+=dt;if(net.acc>=1/15){net.acc=0;try{net.conn.send(snapshot());}catch(e){}}}}
+function frame(now){step(now);draw();requestAnimationFrame(frame);}
+// Hidden tabs stop requestAnimationFrame. A worker timer keeps the simulation (and an online host) ticking while the tab is in the background.
+try{const wk=new Worker(URL.createObjectURL(new Blob(['setInterval(()=>postMessage(0),33)'],{type:'text/javascript'})));wk.onmessage=()=>{if(document.hidden&&running&&!over)step(performance.now());};}catch(e){}
 if(document.fonts&&document.fonts.load)document.fonts.load('700 20px Fredoka').catch(()=>{});
 requestAnimationFrame(frame);
 if(location.hash==='#play')start('practice');
