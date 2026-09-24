@@ -139,6 +139,15 @@ const PAGES_URL='https://zatreby.github.io/kingswarm/';
 const HOSTED=/github\.io|localhost|127\.0\.0\.1/.test(location.hostname);
 {const jm=/^#join-([A-Za-z0-9_-]+)$/.exec(location.hash);if(jm)joinId=jm[1];}
 const ST={follow:0,move:1,idle:2,guard:3,fly:4},STR=['follow','move','idle','guard','fly'];
+const ICE={iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'},{urls:'stun:stun.cloudflare.com:3478'}]};
+const LOOP=/[?&]loop=1/.test(location.search);
+// Loopback transport for testing two tabs in one browser without WebRTC (?loop=1). Same surface as the PeerJS calls used below.
+function FakePeer(){const self=this;const H={};this.on=(e,f)=>{(H[e]||(H[e]=[])).push(f);};const emit=(e,...a)=>{(H[e]||[]).forEach(f=>f(...a));};this.id='loop-'+Math.random().toString(36).slice(2,8);this.destroy=()=>{self.bc&&self.bc.close();};
+  const mkConn=(chanId)=>{const c={_h:{},open:false,on(e,f){(c._h[e]||(c._h[e]=[])).push(f);},_emit(e,...a){(c._h[e]||[]).forEach(f=>f(...a));},send(d){c.bc.postMessage({k:'d',from:self.id,d});},close(){c.bc.postMessage({k:'c',from:self.id});c.bc.close();c._emit('close');}};
+    c.bc=new BroadcastChannel('ks-'+chanId);c.bc.onmessage=m=>{const v=m.data;if(v.from===self.id)return;if(v.k==='hi'){c.bc.postMessage({k:'ok',from:self.id});if(!c.open){c.open=true;emit('connection',c);}}else if(v.k==='ok'){if(!c.open){c.open=true;c._emit('open');}}else if(v.k==='d')c._emit('data',v.d);else if(v.k==='c')c._emit('close');};return c;};
+  this.connect=(id)=>{const c=mkConn(id);setTimeout(()=>c.bc.postMessage({k:'hi',from:self.id}),50);return c;};
+  const lobbyConn=mkConn(this.id);setTimeout(()=>emit('open',self.id),30);}
+const PeerCtor=()=>LOOP?new FakePeer():new Peer(undefined,{debug:0,config:ICE});
 const mouse={x:0,y:0,down:false},keys={};
 const grid=new Map();
 let meta={xp:0,wins:0,losses:0,streak:0,trophies:0,best:0,charms:['skin','boots'],quest:null};
@@ -634,11 +643,11 @@ function lobby(title,text,status,showLink){$('lobbyTitle').textContent=title;$('
 function killNet(){if(net){try{net.conn&&net.conn.close();}catch(e){}try{net.peer&&net.peer.destroy();}catch(e){}}net=null;me=1;}
 function hostOnline(){
   if(!HOSTED){lobby('Online lives on the public build',`Peer-to-peer play is blocked inside this viewer. Open the public build and press the same button there:<br><a class="btn" style="margin-top:10px" href="${PAGES_URL}" target="_blank" rel="noopener">Open ${PAGES_URL}</a>`,'',false);return;}
-  if(typeof Peer==='undefined'){lobby('Online unavailable','The networking library did not load. Check your connection and reload.','',false);return;}
+  if(typeof Peer==='undefined'&&!LOOP){lobby('Online unavailable','The networking library did not load. Check your connection and reload.','',false);return;}
   killNet();mode='online';rival={name:'Friend',kind:'brawler',line:'',charms:[]};
   lobby('Invite a friend','Send this link. When your friend opens it and picks a Hero, the match starts.','Creating room…',true);$('lobbyLink').value='';
-  const peer=new Peer(undefined,{debug:0});net={role:'host',peer,conn:null,rin:null,acc:0};
-  peer.on('open',id=>{const link=location.origin+location.pathname+'#join-'+id;$('lobbyLink').value=link;$('lobbyStatus').textContent='Waiting for your friend to open the link…';});
+  const peer=PeerCtor();net={role:'host',peer,conn:null,rin:null,acc:0};
+  peer.on('open',id=>{const link=location.origin+location.pathname+location.search+'#join-'+id;$('lobbyLink').value=link;$('lobbyStatus').textContent='Waiting for your friend to open the link…';});
   peer.on('connection',conn=>{if(net.conn){conn.close();return;}net.conn=conn;$('lobbyStatus').textContent='Friend connected. Waiting for their Hero pick…';
     conn.on('data',d=>{if(!net||net.role!=='host')return;
       if(d.t==='hello'){rival={name:'Friend',kind:HEROES[d.pick]?d.pick:'brawler',line:'',charms:Array.isArray(d.charms)?d.charms.filter(x=>CHARMS.some(c=>c.id===x)).slice(0,2):[]};start('online');}
@@ -647,10 +656,10 @@ function hostOnline(){
   peer.on('error',e=>{$('lobbyStatus').textContent='Connection problem: '+(e.type||e);});
 }
 function joinOnline(){
-  if(typeof Peer==='undefined'){lobby('Online unavailable','The networking library did not load. Check your connection and reload.','',false);return;}
+  if(typeof Peer==='undefined'&&!LOOP){lobby('Online unavailable','The networking library did not load. Check your connection and reload.','',false);return;}
   killNet();mode='online';me=2;rival={name:'Friend',kind:'brawler',line:'',charms:[]};
   lobby('Joining your friend','Connecting…','Contacting the host…',false);
-  const peer=new Peer(undefined,{debug:0});net={role:'guest',peer,conn:null,evq:[],acc:0,cmap:null,cur:null,dtSnap:67};
+  const peer=PeerCtor();net={role:'guest',peer,conn:null,evq:[],acc:0,cmap:null,cur:null,dtSnap:67};
   peer.on('open',()=>{const conn=peer.connect(joinId,{reliable:true});net.conn=conn;
     conn.on('open',()=>{conn.send({t:'hello',pick,charms:meta.charms});$('lobbyStatus').textContent='Connected. Waiting for the host to start…';});
     conn.on('data',d=>{if(!net||net.role!=='guest')return;
@@ -675,6 +684,7 @@ document.getElementById('menu').addEventListener('click',()=>{const wasGuest=net
 renderMeta();renderPick();
 
 mode='practice';reset();
+window.__ks=()=>({mode,me,running,over,time:+time.toFixed(1),critters:critters.length,h1:[heroes[1].x|0,heroes[1].y|0,heroes[1].hp|0],h2:[heroes[2].x|0,heroes[2].y|0,heroes[2].hp|0],huts:[nodes.filter(n=>n.owner===1).length,nodes.filter(n=>n.owner===2).length],net:net?net.role:null});
 let last=performance.now();
 function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;if(freeze>0){freeze-=dt;}else update(dt);
   if(net&&net.role==='host'&&net.conn&&running&&!over){net.acc+=dt;if(net.acc>=1/15){net.acc=0;try{net.conn.send(snapshot());}catch(e){}}}
