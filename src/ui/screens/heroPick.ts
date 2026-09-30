@@ -23,10 +23,10 @@ export function heroPickScreen(m: HeroPickModel, _ctx: Ctx): ScreenInst {
     });
     card.classList.add('nav-ok');
     const abil = h('ul', { class: 'hero-abil' });
+    // Keycap under the icon, so the text column gets the card's full width.
     info.abilities.forEach((a, k) => abil.append(h('li', null,
-      icon(abilityIcon(a.icon), 'hero-abil-ic'),
-      h('span', { class: 'hero-abil-t' }, h('b', null, a.name), h('span', null, a.text)),
-      frag(glyphSlot(k === 0 ? 'ability' : 'ultimate', 'hero-abil-gl')))));
+      h('span', { class: 'hero-abil-side' }, icon(abilityIcon(a.icon), 'hero-abil-ic'), frag(glyphSlot(k === 0 ? 'ability' : 'ultimate', 'hero-abil-gl'))),
+      h('span', { class: 'hero-abil-t' }, h('b', null, a.name), h('span', null, a.text)))));
     card.append(
       h('span', { class: 'hero-art' }, icon(heroIcon(hv.id), 'hero-ic'), locked ? pic('lock', 'hero-lock') : null),
       h('span', { class: 'hero-name' }, hv.name ?? info.name),

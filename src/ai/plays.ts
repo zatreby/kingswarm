@@ -41,13 +41,15 @@ const WAR_PARTY_FROM = 32;
 const AFTER_WAVE = 6;
 const AMBUSH_OFFSET = 2.2;
 const FEINT_TIME = 1.0;
+/** After committing, no escapes and no abandoning for this long (the tell's honesty window is lead + 1 s). */
+const COMMIT_HOLD = 1.5;
 
 export class Plays {
   active: Active | null = null;
   private readyAt = 0;
   private crownDone = false;
 
-  constructor(private rng: Rng, private emit: (s: BotSignal) => void) {}
+  constructor(private rng: Rng, private emit: (s: BotSignal) => void, private motor: Motor) {}
 
   get busy(): boolean {
     return this.active !== null;
@@ -180,13 +182,15 @@ export class Plays {
       targets: [], k: 0, kSince: 0, decoyX: 0, decoyY: 0, blinked: false,
     };
     if (!feint) this.announce(ctx);
-    return true;
+    return this.active !== null;
   }
 
   private announce(ctx: Ctx): void {
     const a = this.active!;
     a.phase = 'announce';
     a.t0 = ctx.w.time;
+    // a tell never lies: if the Blink cannot be ready when the tell says, do not announce at all
+    if (a.id === 'ambush' && ctx.me.cd[0] > a.lead - 0.05) { this.finish(ctx.w.time, 1); return; }
     if (a.id === 'ambush') {
       // fix the mark now, from where she stands (the feint may have moved things)
       const { view, me } = ctx;
@@ -196,7 +200,8 @@ export class Plays {
       const r = tuning.abilities.blink.blink.range - 0.5;
       const dm = dist(me.x, me.y, px, py);
       if (dm > r) { px = me.x + (px - me.x) * (r / dm); py = me.y + (py - me.y) * (r / dm); }
-      a.x = px; a.y = py;
+      // mark only ground she can stand on, or the landing would be pushed off the mark
+      [a.x, a.y] = this.motor.freeNear(ctx.w, px, py);
     }
     this.emit({ kind: 'tell', tell: a.tell, x: a.x, y: a.y, lead: a.lead });
     const lines = ctx.profile.barks.tell;
@@ -212,10 +217,17 @@ export class Plays {
     if (!a) return null;
     const { w, me } = ctx;
     const t = w.time;
-    const base: Directive = { intent: a.intent, windup: false, press: null, fireAt: null, goal: null, allIn: a.allIn };
+    const base: Directive = {
+      intent: a.intent, windup: false, press: null, fireAt: null, goal: null, allIn: a.allIn,
+      keepAbility: a.id === 'ambush' && !a.blinked,
+    };
 
     if (a.phase === 'feint') {
-      if (t - a.t0 >= FEINT_TIME || ctx.followers < 3) { this.announce(ctx); return { ...base, windup: true }; }
+      if (t - a.t0 >= FEINT_TIME || ctx.followers < 3) {
+        this.announce(ctx);
+        if (!this.active) return null; // withdrawn: it could not have come true
+        return { ...base, windup: true };
+      }
       return { ...base, fireAt: { x: a.decoyX, y: a.decoyY }, goal: { x: me.x, y: me.y } };
     }
 
@@ -233,6 +245,8 @@ export class Plays {
 
     // ---- commit ----
     const since = t - a.t0;
+    // the announced action must visibly start: hold steady (and keep it) through the tell window
+    if (since < COMMIT_HOLD) base.steady = true;
     switch (a.id) {
       case 'ambush': {
         if (!a.blinked) {
@@ -270,8 +284,8 @@ export class Plays {
 
     // generic end conditions
     const spent = ctx.followers < 2 && ctx.ammo < 3 && since > 4;
-    const won = a.intent.target >= 0 && ctx.view.buildings[a.intent.target].owner === ctx.team && a.intent.kind !== 'takeCrown';
-    const beaten = a.intent.kind === 'takeCrown' && ctx.hpFrac < 0.25 && ctx.view.foe.alive && ctx.foeDist < 6;
+    const won = since > COMMIT_HOLD && a.intent.target >= 0 && ctx.view.buildings[a.intent.target].owner === ctx.team && a.intent.kind !== 'takeCrown';
+    const beaten = a.intent.kind === 'takeCrown' && since > COMMIT_HOLD && ctx.hpFrac < 0.25 && ctx.view.foe.alive && ctx.foeDist < 6;
     if (t >= a.endAt || spent || won || beaten) {
       if (a.id === 'warParty') {
         // the wave is over: fall back (and leave the base empty for a moment, his flaw)

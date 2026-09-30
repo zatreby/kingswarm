@@ -106,7 +106,7 @@ export interface TitleModel {
   onNewRun: () => void;
   onCodex: () => void;
   onSettings: () => void;
-  /** Versus is shown disabled with "coming soon" while this is absent. */
+  /** Versus is hidden entirely while this is absent (it arrives in M3). */
   onVersus?: () => void;
 }
 
@@ -162,7 +162,9 @@ export interface ResultModel {
   maxLives: number;
   /** One-time explanation after the first ever loss, <= 8 words. */
   lossNote?: string;
-  /** Next (win) or Rematch (loss). */
+  /** Primary button label. Default: "Choose a Mutation" on a win (the draft follows), "Rematch" on a loss.
+   *  Pass e.g. "Final battle" after the draft-less win before the boss, or "Claim the Crown" after the boss. */
+  primaryLabel?: string;
   onPrimary: () => void;
   onMenu: () => void;
 }
@@ -175,10 +177,13 @@ export interface DraftModel {
   next: RivalView;
   /** 1-based index of the battle the next rival is. */
   nextBattle?: BattleIndex;
+  /** Options that answer the next rival's question (GDD 4: at least one counters them). They get a "Good vs <rival>" ribbon. */
+  counters?: MutationId[];
   onPick: (id: MutationId) => void;
   onReroll: () => void;
   onSkip: () => void;
-  /** Hook: mount a live preview (canvas) into each card's slot. Return a cleanup. */
+  /** Hook: mount a live preview (canvas/video/img) into each card's art slot; the Mutation icon then shrinks to a
+   *  corner badge over it. Called once per card when the screen is built. Return a cleanup. */
   mountPreview?: (id: MutationId, slot: HTMLElement) => (() => void) | void;
 }
 

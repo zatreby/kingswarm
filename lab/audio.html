@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kingswarm audio lab</title>
+  <link rel="icon" href="data:," />
+  <style>
+    :root { --bg: #16283a; --panel: #1f3a55; --ink: #eaf2fb; --muted: #9fb6cc; --accent: #ffcf4a; --hot: #ff7a6b; }
+    html, body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 system-ui, sans-serif; }
+    main { max-width: 1100px; margin: 0 auto; padding: 16px; }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    h2 { font-size: 14px; margin: 16px 0 6px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+    p.note { color: var(--muted); margin: 0 0 12px; }
+    .row { display: flex; flex-wrap: wrap; gap: 6px; }
+    button { background: var(--panel); color: var(--ink); border: 1px solid #335a80; border-radius: 6px; padding: 6px 10px; font: inherit; cursor: pointer; }
+    button:hover { border-color: var(--accent); }
+    button.on { background: var(--accent); color: #1a1a1a; }
+    button small { color: var(--muted); margin-left: 4px; }
+    button.on small { color: #333; }
+    label { display: inline-flex; gap: 6px; align-items: center; margin-right: 16px; }
+    #status, #mix { background: #0f1e2c; border-radius: 6px; padding: 8px 10px; font: 12px/1.5 ui-monospace, monospace; white-space: pre-wrap; min-height: 2em; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Kingswarm audio lab</h1>
+    <p class="note">Click anything to unlock audio. Every sound id plays through the real engine (random variant, pitch and level spread, voice caps).
+      Offline mix check: <code>window.__audioLab.renderMix('heavy' | 'crown' | 'calm' | 'victory')</code>.</p>
+    <div id="status">not unlocked</div>
+    <h2>Music</h2>
+    <div class="row" id="music"></div>
+    <h2>Volumes</h2>
+    <div class="row" id="volumes"></div>
+    <div id="sounds"></div>
+    <h2>Scenario streams (live)</h2>
+    <div class="row" id="scenarios"></div>
+    <h2>Offline mix check</h2>
+    <div id="mix">not run</div>
+  </main>
+  <script type="module" src="./audio-lab.ts"></script>
+</body>
+</html>

@@ -110,12 +110,13 @@ export function crowns(lives: number, max: number, breaking = -1): HTMLElement {
   return row;
 }
 
-/** Mount a caller portrait (canvas mounted as is, bitmap copied, URL as <img>) or a silhouette. */
-export function portrait(src: PortraitSource | undefined, cls = '', red = true, alt = ''): HTMLElement {
+/** Mount a caller portrait (canvas mounted as is, bitmap copied, URL as <img>) or a silhouette.
+ *  copy = true snapshots a canvas instead of moving it (for a second, small use of the same portrait). */
+export function portrait(src: PortraitSource | undefined, cls = '', red = true, alt = '', copy = false): HTMLElement {
   const frame = h('span', { class: `portrait ${red ? 'portrait-red' : 'portrait-blue'} ${cls}`, role: alt ? 'img' : undefined, 'aria-label': alt || undefined });
   if (!src) frame.innerHTML = silhouette(red);
   else if (typeof src === 'string') frame.append(h('img', { src, alt: '', draggable: 'false' }));
-  else if (src instanceof HTMLCanvasElement) frame.append(src);
+  else if (src instanceof HTMLCanvasElement && !copy) frame.append(src);
   else {
     const c = h('canvas', { width: String(src.width), height: String(src.height) });
     c.getContext('2d')?.drawImage(src, 0, 0);

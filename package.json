@@ -11,7 +11,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
-    "check": "npm run typecheck && npm run test"
+    "check": "npm run typecheck && npm run test",
+    "sim": "tsx tools/sim/run.ts",
+    "sim:matrix": "tsx tools/sim/matrix.ts",
+    "sim:trace": "tsx tools/sim/trace.ts",
+    "sim:baseline": "tsx tools/sim/baseline.ts"
   },
   "dependencies": {
     "three": "^0.186.1"

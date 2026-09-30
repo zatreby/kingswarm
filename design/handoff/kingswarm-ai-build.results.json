@@ -1,0 +1,12 @@
+{
+ "workflow": "kingswarm-ai-build",
+ "script": "design/handoff/workflows/kingswarm-ai-build.js",
+ "stages": [
+  {
+   "label": "ai:build",
+   "phase": "Build",
+   "status": "interrupted",
+   "digest": "design/handoff/inflight/ai-build.md"
+  }
+ ]
+}

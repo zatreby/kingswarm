@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cooldownLabel, formatClock, formatElapsed, quantize, ordinalBattle } from './format';
+import { cooldownLabel, formatClock, formatElapsed, quantize, ordinalBattle, shortName } from './format';
 
 describe('formatClock', () => {
   it('ceils remaining seconds so the last second still reads 0:01', () => {
@@ -45,5 +45,16 @@ describe('ordinalBattle', () => {
   it('names the boss battle', () => {
     expect(ordinalBattle(2, 5)).toBe('Battle 2 of 5');
     expect(ordinalBattle(6, 6, true)).toBe('Final battle');
+  });
+});
+
+describe('shortName', () => {
+  it('keeps the words before " the "', () => {
+    expect(shortName('Pip the Tinkerer')).toBe('Pip');
+    expect(shortName('King Mora the Crowned')).toBe('King Mora');
+  });
+  it('keeps names without an epithet whole', () => {
+    expect(shortName('Mother Brood')).toBe('Mother Brood');
+    expect(shortName('Queen Sable')).toBe('Queen Sable');
   });
 });

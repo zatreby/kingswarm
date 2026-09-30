@@ -21,7 +21,8 @@ export const simY = (sz: number) => sz + HALF_H;
 export const captureRadius = (b: Pick<Building, 'r'>) => b.r + CAPTURE_MARGIN;
 
 // Flight arc feel: apex grows with throw distance so long lobs read as lobs; Piercers skim.
-export const FLIGHT = { apexPerUnit: 0.26, apexMin: 0.7, apexMax: 2.4, flatApex: 0.25, lift: 0.1 } as const;
+// Exaggerated for readability (art review): lobs clear the crowd so the volley reads as shots, not a line.
+export const FLIGHT = { apexPerUnit: 0.36, apexMin: 1.1, apexMax: 3.1, flatApex: 0.3, lift: 0.1 } as const;
 
 export function flightApex(dist: number, flat: boolean): number {
   if (flat) return FLIGHT.flatApex;

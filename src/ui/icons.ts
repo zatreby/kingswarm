@@ -162,7 +162,8 @@ const MUT: Record<MutationId, () => string> = {
   chainReaction: () => `<ellipse cx="23" cy="36" rx="6" ry="3.5" transform="rotate(-50 23 36)" stroke-width="3"/><ellipse cx="41" cy="36" rx="6" ry="3.5" transform="rotate(50 41 36)" stroke-width="3"/>`
     + star(12, 48, 11, 5, 7, FIRE) + star(32, 20, 13, 6, 8, FIRE) + star(52, 48, 11, 5, 7, FIRE) + star(32, 20, 5, 2.5, 4, FIRE_L),
   // Ice-blue, frosted and spiky: a different silhouette and colour from Bombers' dark round bomb.
-  cryoBombs: () => `<path d="M17 40 L6 13 L25 29 Z" fill="${ICE}"/><path d="M47 40 L59 12 L39 29 Z" fill="${ICE}"/>`
+  cryoBombs: () => `<path d="M16 46 L3 34 L8 27 L19 36 Z M18 35 L11 17 L19 14 L24 31 Z" fill="${ICE}"/><path d="M48 46 L61 34 L56 27 L45 36 Z M46 35 L53 17 L45 14 L40 31 Z" fill="${ICE}"/>`
+    + `<path d="M13 22 L20 31 M51 22 L44 31" stroke="${ICE_D}" stroke-width="2"/>`
     + `<circle cx="32" cy="41" r="18" fill="${ICE_D}"/>`
     + `<path d="M15 36 C17 27 24 23 32 23 C40 23 47 27 49 36 C46 38 44 33 41 37 C38 40 36 34 32 38 C28 41 26 34 23 37 C20 39 18 34 15 36 Z" fill="#fff" stroke-width="2.5"/>`
     + eyes(32, 45, 4.4, 0.2) + `<path d="M32 23 V16"/>` + snowflake(32, 10, 7.5, 2.2),
@@ -207,10 +208,10 @@ const TRAIT: Record<TraitIcon, () => string> = {
 const ABILITY: Record<AbilityIcon, () => string> = {
   stomp: () => `<path d="M23 5 H41 V25 H51 L32 44 L13 25 H23 Z" fill="${BLUE_L}"/><ellipse cx="32" cy="53" rx="24" ry="6" fill="${DIRT}"/><path d="M4 40 L10 44 M60 40 L54 44"/>`,
   // A war horn with critters bursting out of the bell.
-  kingscall: () => `<path d="M6.4 50.1 Q20 40 33.1 17.5 L46.9 34.5 Q24 44 9.6 53.9 Z" fill="${GOLD}"/>`
-    + `<ellipse cx="40" cy="26" rx="11" ry="4.2" transform="rotate(50.9 40 26)" fill="${WOOD}"/>`
-    + `<path d="M40 8 L42 3 M50 22 L56 20 M48 44 L53 47" stroke-width="3"/>`
-    + blob(51, 12, 6.5, BLUE, { look: 0.8 }) + blob(57, 32, 5.5, BLUE, { look: 0.8 }),
+  kingscall: () => `<path d="M3.9 51.8 Q18 40 28.4 13.8 L47.6 34.2 Q24 46 8 56.2 Z" fill="${GOLD}"/>`
+    + `<ellipse cx="38" cy="24" rx="14" ry="5" transform="rotate(46.9 38 24)" fill="${WOOD}"/>`
+    + `<path d="M22 44 Q30 36 34 26" stroke="#fff" stroke-opacity=".6" stroke-width="3"/>`
+    + blob(52, 10, 6.5, BLUE, { look: 0.8 }) + blob(57.5, 31, 5.5, BLUE, { look: 0.8 }),
   blink: () => `<circle cx="17" cy="42" r="11" stroke-dasharray="4 5"/>` + `<path d="M44 6 C45 18 47 22 58 24 C47 26 45 30 44 42 C43 30 41 26 30 24 C41 22 43 18 44 6 Z" fill="${FROST}"/>`
     + `<path d="M22 36 Q32 30 36 30" stroke-dasharray="3 4"/>`,
   vortex: () => `<path d="${spiral(32, 32)}" stroke-width="4"/>`,

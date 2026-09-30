@@ -6,12 +6,13 @@ import type { Ctx, ScreenInst } from './common';
 
 const VERBS: { verb: Verb; name: string; line: string }[] = [
   { verb: 'move', name: 'Move', line: 'Walk your King. Your swarm follows you.' },
-  { verb: 'fire', name: 'Throw', line: 'Hold fire to hurl critters where you aim.' },
+  { verb: 'fire', name: 'Throw', line: 'Hold to hurl critters where you aim.' },
   { verb: 'recall', name: 'Recall', line: 'Whistle, and every critter runs back to you.' },
 ];
+// The three core verbs are the tiles above; the table lists everything else once.
 const TABLE: { verb: Verb; name: string }[] = [
-  { verb: 'move', name: 'Move' }, { verb: 'aim', name: 'Aim' }, { verb: 'fire', name: 'Throw swarm' }, { verb: 'recall', name: 'Recall' },
-  { verb: 'dash', name: 'Dash' }, { verb: 'ability', name: 'Ability' }, { verb: 'ultimate', name: 'Ultimate' }, { verb: 'pause', name: 'Pause' },
+  { verb: 'aim', name: 'Aim' }, { verb: 'dash', name: 'Dash' }, { verb: 'ability', name: 'Ability' },
+  { verb: 'ultimate', name: 'Ultimate' }, { verb: 'pause', name: 'Pause' }, { verb: 'accept', name: 'Confirm' },
 ];
 const DEVICES: { d: Device; t: string }[] = [{ d: 'kbm', t: 'Keyboard & mouse' }, { d: 'gamepad', t: 'Controller' }, { d: 'touch', t: 'Touch' }];
 
@@ -37,8 +38,8 @@ export function howtoScreen(m: HowToModel, ctx: Ctx): ScreenInst {
     table.replaceChildren(...TABLE.flatMap(r => [
       h('dt', null, r.name),
       h('dd', { 'aria-label': glyphLabel(r.verb, dev) }, frag(`<span class="gl" aria-hidden="true">${glyphHtml(r.verb, dev)}</span>`),
-        // Skip the spoken label when the keycap already says it ("Q", "Shift").
-        dev !== 'kbm' || glyphLabel(r.verb, dev).length > 5 ? h('span', { class: 'ct-label', 'aria-hidden': 'true' }, glyphLabel(r.verb, dev)) : null)]));
+        // One rule per table: keycaps and pad buttons speak for themselves; touch glyphs all look alike, so every touch row is named.
+        dev === 'touch' ? h('span', { class: 'ct-label', 'aria-hidden': 'true' }, glyphLabel(r.verb, dev)) : null)]));
   };
   render();
   segBtns.get(dev)?.setAttribute('data-autofocus', '');

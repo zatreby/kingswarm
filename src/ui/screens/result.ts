@@ -14,7 +14,7 @@ export function resultScreen(m: ResultModel, _ctx: Ctx): ScreenInst {
     win ? h('span', { class: 'rays', 'aria-hidden': 'true' }) : null,
     h('span', { class: 'result-ic', html: win ? picto('crown') : picto('brokenCrown'), 'aria-hidden': 'true' }),
     h('h1', { class: `display result-title ${win ? 'gold' : ''}` }, win ? 'Victory' : 'Defeated'),
-    h('p', { class: 'result-sub' }, `${ordinalBattle(m.battle.index, m.battle.total, m.battle.boss)} · vs ${m.rivalName}`));
+    h('p', { class: 'result-sub ribbon' }, `${ordinalBattle(m.battle.index, m.battle.total, m.battle.boss)} · vs ${m.rivalName}`));
 
   const lostCrown = !win && m.livesAfter < m.livesBefore ? m.livesAfter : -1;
   const facts = h('div', { class: 'card result-card tilt-r' },
@@ -25,8 +25,9 @@ export function resultScreen(m: ResultModel, _ctx: Ctx): ScreenInst {
       h('b', null, m.livesAfter > 0 ? `${plural(m.livesAfter, 'Crown', 'Crowns')} left` : 'No Crowns left')),
     !win && m.lossNote ? h('p', { class: 'loss-note' }, m.lossNote) : null);
 
-  const primary = btn(win ? 'Next' : 'Rematch', m.onPrimary, { kind: 'gold', size: 'lg', autofocus: true, verb: 'accept',
-    icon: win ? picto('next') : picto('reroll'), cls: 'btn-primary-result' });
+  // Label the reward, not the step: a win leads to the draft.
+  const primary = btn(m.primaryLabel ?? (win ? 'Choose a Mutation' : 'Rematch'), m.onPrimary, { kind: 'gold', size: 'lg', autofocus: true, verb: 'accept',
+    icon: win ? picto('star') : picto('reroll'), cls: 'btn-primary-result' });
   el.append(head, facts, h('div', { class: 'foot-col' }, primary, btn('Menu', m.onMenu, { kind: 'link', size: 'sm' })));
   return { el, back: m.onMenu };
 }

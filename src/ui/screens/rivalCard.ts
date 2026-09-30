@@ -1,9 +1,7 @@
 import { HEROES } from '../catalog';
-import { crowns, h, mutationChip, portrait, shell, traitChip } from '../dom';
+import { btn, crowns, h, icon, mutationChip, portrait, shell, traitChip } from '../dom';
 import { ordinalBattle } from '../format';
-import { glyphSlot } from '../glyphs';
-import { heroIcon } from '../icons';
-import { frag, icon } from '../dom';
+import { heroIcon, picto } from '../icons';
 import type { RivalCardModel } from '../types';
 import type { Ctx, ScreenInst } from './common';
 
@@ -27,11 +25,12 @@ export function rivalCardScreen(m: RivalCardModel, _ctx: Ctx): ScreenInst {
         h('div', { class: 'rival-traits' }, traitChip(r.traits[0]), traitChip(r.traits[1])),
         r.mutations.length
           ? h('div', { class: 'rival-muts' }, h('span', { class: 'mini-label' }, 'Mutations'), ...r.mutations.map(mutationChip))
-          : h('div', { class: 'rival-muts' }, h('span', { class: 'mini-label' }, 'Mutations'), h('span', { class: 'rival-none' }, 'None yet')))),
+          : h('div', { class: 'rival-muts' }, h('span', { class: 'mini-label' }, 'Mutations'), h('span', { class: 'rival-none' }, 'None yet')),
+        // The battle's question is the point of each rival (GDD pillar 2).
+        h('p', { class: 'rival-q' }, h('span', { class: 'ico rival-q-ic', html: picto('question'), 'aria-hidden': 'true' }), r.question))),
     h('footer', { class: 'rival-foot' },
       h('span', { class: 'rival-lives' }, h('span', { class: 'mini-label' }, 'Your crowns'), crowns(m.lives, m.maxLives)),
-      h('button', { type: 'button', class: 'rival-skip', 'data-autofocus': '', onclick: finish, 'aria-label': 'Start battle' },
-        frag(glyphSlot('accept')), h('span', null, 'Fight!'))),
+      btn('Fight!', finish, { kind: 'gold', size: 'lg', verb: 'accept', autofocus: true, label: 'Start battle', cls: 'rival-fight' })),
     h('span', { class: 'rival-timer', 'aria-hidden': 'true' }, h('span', { class: 'rival-timer-fill' })));
   el.append(h('div', { class: 'vs-badge', 'aria-hidden': 'true' }, 'VS'), card);
   el.addEventListener('pointerdown', (e) => { if (e.target === el) finish(); });

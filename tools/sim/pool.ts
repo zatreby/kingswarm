@@ -22,6 +22,8 @@ export interface Job {
   a: SideJob;
   b: SideJob;
   seatA: 0 | 1;
+  /** What-if tuning overrides applied in the worker (see tune.ts). */
+  tune?: [string, number][];
 }
 
 export const MAX_WORKERS = 4;

@@ -32,11 +32,20 @@ export function codexScreen(m: CodexModel, _ctx: Ctx): ScreenInst {
     (Object.keys(tabs) as Tab[]).forEach(k => { tabs[k].setAttribute('aria-selected', String(k === t)); tabs[k].tabIndex = 0; });
     body.replaceChildren(t === 'mutations' ? mutationsTab() : t === 'rivals' ? rivalsTab() : heroesTab());
     body.scrollTop = 0;
+    requestAnimationFrame(fade);
   };
+  // Scroll affordance: a bottom fade while more content is below (measured on render/scroll only, not per frame).
+  const fade = () => {
+    body.classList.toggle('more', body.scrollHeight > body.clientHeight + 4);
+    body.classList.toggle('at-end', body.scrollTop + body.clientHeight >= body.scrollHeight - 4);
+  };
+  body.addEventListener('scroll', fade, { passive: true });
 
   const mutationsTab = () => {
     const detail = h('div', { class: 'codex-detail card', 'aria-live': 'polite' });
+    const tiles = new Map<MutationId, HTMLElement>();
     const showDetail = (id: MutationId) => {
+      tiles.forEach((t, k) => t.classList.toggle('sel', k === id));
       const v = byId.get(id);
       const info = MUTATIONS[id];
       detail.replaceChildren();
@@ -67,8 +76,9 @@ export function codexScreen(m: CodexModel, _ctx: Ctx): ScreenInst {
         tile = h('button', { type: 'button', class: 'ctile unknown duo-hidden', 'aria-label': `Hidden Duo: ${TAGS[info.tags[0]].name} plus ${TAGS[info.tags[1]].name}` },
           h('span', { class: 'ctile-duo' }, icon(tagIcon(info.tags[0])), h('b', null, '+'), icon(tagIcon(info.tags[1]))), h('span', { class: 'ctile-name' }, 'Duo'));
       } else {
-        tile = h('button', { type: 'button', class: 'ctile unknown', 'aria-label': 'Undiscovered Mutation' }, pic('question', 'ctile-ic'), h('span', { class: 'ctile-name' }, '???'));
+        tile = h('button', { type: 'button', class: 'ctile unknown', 'aria-label': 'Undiscovered Mutation' }, pic('question', 'ctile-ic'));
       }
+      tiles.set(id, tile);
       tile.addEventListener('focus', () => showDetail(id));
       tile.addEventListener('pointerenter', () => showDetail(id));
       grid.append(tile);

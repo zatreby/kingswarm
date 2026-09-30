@@ -40,7 +40,7 @@ class UtilityBot implements Bot {
     const s = profile.skill;
     this.perception = new Perception(team, Math.round((s.reactionMs / 1000) * 60));
     this.motor = new Motor(new Rng(mixSeed(seed, team, 2)), s.buttonGapMs / 1000, (s.aimErrorDeg * Math.PI) / 180, s.leadAim);
-    this.plays = new Plays(new Rng(mixSeed(seed, team, 3)), (sig) => this.signals.push(sig));
+    this.plays = new Plays(new Rng(mixSeed(seed, team, 3)), (sig) => this.signals.push(sig), this.motor);
     this.tactics = new Set(profile.tactics);
   }
 

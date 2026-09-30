@@ -88,6 +88,9 @@ function model(id: string): ScreenModel {
       const options: MutationId[] = q.get('duo') === '0' ? ['bombers', 'splitters', 'frostbite'] : ['bombers', 'cryoBombs', 'longArm'];
       return { screen: 'draft', options, rerolls: Number(q.get('rerolls') ?? 1), owned: q.get('owned') === '0' ? [] : ['frostbite', 'splitters'],
         next: R.brood, nextBattle: { index: 3, total: 5 },
+        // Mother Brood floods: area damage answers her question.
+        counters: options.filter(id => MUTATIONS[id].tags.includes('boom')),
+        mountPreview: q.get('preview') === '0' ? undefined : previewStub,
         onPick: (m) => { log('picked', m); ui.toast(`${MUTATIONS[m].name} joins your swarm`, m); go('rivalCard'); },
         onReroll: () => { log('reroll'); ui.show({ ...(model('draft') as Extract<ScreenModel, { screen: 'draft' }>), options: ['scorch', 'militia', 'homing'], rerolls: 0 }); },
         onSkip: () => go('rivalCard') };
@@ -119,6 +122,70 @@ function model(id: string): ScreenModel {
     default:
       return { screen: 'none' };
   }
+}
+
+/** Lab stand-in for the render layer's Mutation preview: a 2 s loop of a throw and what the Mutation does
+ *  on landing, drawn in 2D. The real one will be a small live 3D vignette; this only lets us judge the card. */
+function previewStub(id: MutationId, slot: HTMLElement): () => void {
+  const tag = MUTATIONS[id].tags[0];
+  const c = document.createElement('canvas');
+  c.width = 540; c.height = 320;
+  slot.append(c);
+  const g = c.getContext('2d')!;
+  const INK = '#1B2430';
+  const BG: Record<string, [string, string]> = { boom: ['#FFE6D2', '#FFC9A3'], brood: ['#E6F6D9', '#BFE3A5'], bite: ['#EEE7FD', '#CFC0F7'], king: ['#FFF4D1', '#FFE09A'] };
+  const critter = (x: number, y: number, r: number, fill: string, look = 0.4) => {
+    g.lineWidth = 5; g.strokeStyle = INK; g.fillStyle = fill;
+    g.beginPath(); g.ellipse(x, y, r, r * 0.9, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+    for (const s of [-1, 1]) {
+      g.fillStyle = '#fff'; g.lineWidth = 2.5; g.beginPath(); g.arc(x + s * r * 0.3, y - r * 0.1, r * 0.26, 0, Math.PI * 2); g.fill(); g.stroke();
+      g.fillStyle = INK; g.beginPath(); g.arc(x + s * r * 0.3 + look * r * 0.1, y - r * 0.08, r * 0.13, 0, Math.PI * 2); g.fill();
+    }
+  };
+  const K = { x: 110, y: 230 }, T = { x: 400, y: 236 };
+  let raf = 0;
+  const t0 = performance.now();
+  const frame = () => {
+    const t = ((performance.now() - t0) / 2000) % 1;
+    const [a, b] = BG[tag];
+    const grd = g.createLinearGradient(0, 0, 0, 320); grd.addColorStop(0, a); grd.addColorStop(1, b);
+    g.fillStyle = grd; g.fillRect(0, 0, 540, 320);
+    g.fillStyle = 'rgba(27,36,48,.12)'; g.beginPath(); g.ellipse(270, 262, 250, 34, 0, 0, Math.PI * 2); g.fill();
+    const land = 0.42, e = t < land ? 0 : (t - land) / (1 - land);
+    // Enemies: knocked back (boom), frozen (bite), or just there.
+    for (let i = 0; i < 3; i++) {
+      const ox = (i - 1) * 46;
+      let x = T.x + ox, y = T.y + (i === 1 ? -6 : 6), fill = '#FF5A4F';
+      if (tag === 'boom' && e > 0) { x += ox * e * 1.2; y -= Math.sin(Math.min(1, e * 1.6) * Math.PI) * 60; }
+      if (tag === 'bite' && e > 0) fill = e < 0.8 ? '#9FE8FF' : '#FF5A4F';
+      if (tag === 'boom' && e > 0.7) continue;
+      critter(x, y, 24, fill, -0.8);
+    }
+    critter(K.x, K.y, 40, '#3FA7FF');
+    if (tag === 'king') { g.fillStyle = '#FFD166'; g.strokeStyle = INK; g.lineWidth = 4; g.beginPath(); g.moveTo(K.x - 26, K.y - 34); g.lineTo(K.x - 30, K.y - 62); g.lineTo(K.x - 12, K.y - 48); g.lineTo(K.x, K.y - 70); g.lineTo(K.x + 12, K.y - 48); g.lineTo(K.x + 30, K.y - 62); g.lineTo(K.x + 26, K.y - 34); g.closePath(); g.fill(); g.stroke(); }
+    if (t < land) {
+      // The throw: a critter arcs from the King to the enemies (King Mutations throw two, faster).
+      const n = tag === 'king' ? 3 : 1;
+      for (let k = 0; k < n; k++) {
+        const p = Math.min(1, t / land * (tag === 'king' ? 1.25 : 1) - k * 0.12);
+        if (p <= 0) continue;
+        critter(K.x + (T.x - K.x) * p, K.y - 30 - Math.sin(p * Math.PI) * 150, 18, '#3FA7FF', 1);
+      }
+    } else if (tag === 'boom') {
+      g.globalAlpha = 1 - e; g.fillStyle = '#FF8A3D'; g.beginPath(); g.arc(T.x, T.y, 30 + e * 150, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#FFE8A6'; g.beginPath(); g.arc(T.x, T.y, 20 + e * 80, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1;
+    } else if (tag === 'brood') {
+      for (let k = 0; k < 3; k++) critter(T.x - 90 + k * 44, T.y + 20 - Math.sin(Math.min(1, e * 2) * Math.PI) * (40 + k * 12), 16, '#3FA7FF', 0.5);
+    } else if (tag === 'bite') {
+      g.strokeStyle = '#A98BEF'; g.lineWidth = 8; g.globalAlpha = 1 - e; g.beginPath(); g.arc(T.x, T.y, 20 + e * 110, 0, Math.PI * 2); g.stroke(); g.globalAlpha = 1;
+    } else {
+      for (let k = 0; k < 6; k++) { const a2 = k * 1.05 + e * 3; g.fillStyle = '#FFD166'; g.globalAlpha = 1 - e; g.beginPath(); g.arc(T.x + Math.cos(a2) * e * 110, T.y - 20 + Math.sin(a2) * e * 70, 9, 0, Math.PI * 2); g.fill(); }
+      g.globalAlpha = 1;
+    }
+    raf = requestAnimationFrame(frame);
+  };
+  frame();
+  return () => { cancelAnimationFrame(raf); c.remove(); };
 }
 
 function settingsModel(back: () => void): ScreenModel {

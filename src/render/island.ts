@@ -13,7 +13,7 @@ export const ISLAND = {
   corner: 3.2,
   edgeNoise: 0.22,
   outlinePts: 220,
-  waterY: -1.0,
+  waterY: -1.45,
   /** Ground texture pixels per world unit. */
   ppu: 48,
   pathWidth: 0.62,
@@ -65,8 +65,7 @@ export function buildIsland(kit: Kit, buildings: readonly LayoutBuilding[], obst
   group.add(top);
 
   // --- cliff: rings stepping down and in, jittered for facets, coloured by band
-  const cliff = new THREE.Mesh(track(cliffGeometry(outline, rnd)), track(toonNew(PAL.white, { vertexColors: true })));
-  cliff.receiveShadow = true;
+  const cliff = new THREE.Mesh(track(cliffGeometry(outline, rnd)), track(new THREE.MeshBasicMaterial({ vertexColors: true })));
   group.add(cliff);
 
   // --- water: shallow glow near the shore fading to deep, plus a foam line
@@ -84,7 +83,7 @@ export function buildIsland(kit: Kit, buildings: readonly LayoutBuilding[], obst
   const water = new THREE.Mesh(track(waterGeometry()), waterMat);
   water.position.y = ISLAND.waterY;
   group.add(water);
-  const shoreMat = track(new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false }));
+  const shoreMat = track(shoreMaterial(waterTime));
   const shore = new THREE.Mesh(track(shoreGeometry(outline)), shoreMat);
   shore.position.y = ISLAND.waterY + 0.01;
   group.add(shore);
@@ -111,7 +110,7 @@ export function buildIsland(kit: Kit, buildings: readonly LayoutBuilding[], obst
       const n = 2 + Math.floor(rnd() * 2);
       for (let i = 0; i < n; i++) {
         const a = rnd() * 6.28, d = o.r * (0.75 + rnd() * 0.25);
-        scatter.add((['rock_A', 'rock_B', 'rock_C', 'rock_D'] as const)[Math.floor(rnd() * 4)], x + Math.cos(a) * d, z + Math.sin(a) * d, o.r * (0.6 + rnd() * 0.4), rnd() * 6.28, 'width');
+        scatter.stone(x + Math.cos(a) * d, z + Math.sin(a) * d, o.r * (0.3 + rnd() * 0.25), rnd);
       }
     } else {
       const pond = new THREE.Mesh(track(pondGeometry(o.r, rnd)), track(toonNew(PAL.waterLight)));
@@ -124,32 +123,42 @@ export function buildIsland(kit: Kit, buildings: readonly LayoutBuilding[], obst
     }
   }
 
-  // Rim: tall trees along the far and side edges (they hide nothing important there), low stuff along the near edge.
-  for (let i = 0; i < outline.length; i += 2) {
-    const p = outline[i];
-    const inset = 0.35 + rnd() * 0.9;
-    const x = p.x - p.nx * inset, z = p.z - p.nz * inset;
-    const sx = x + HALF_W, sy = z + HALF_H;
-    if (blocked(sx, sy, 0.4)) continue;
-    const nearEdge = z > HALF_H - 0.2;
-    const inArena = sx > 0.15 && sx < 31.85 && sy > 0.15 && sy < 17.85;
-    const r = rnd();
-    if (!nearEdge && !inArena && r < 0.55) {
-      const m: KitModel = r < 0.1 ? 'trees_A' : r < 0.2 ? 'trees_B' : r < 0.38 ? 'tree_A' : 'tree_B';
-      scatter.add(m, x, z, m.startsWith('trees') ? 1.9 + rnd() * 0.5 : 1.5 + rnd() * 0.8, rnd() * 6.28, 'height');
-    } else if (r < 0.7) scatter.bush(x, z, 0.28 + rnd() * 0.2, rnd);
-    else if (r < 0.8) scatter.add((['rock_A', 'rock_B', 'rock_C', 'rock_D'] as const)[Math.floor(rnd() * 4)], x, z, 0.35 + rnd() * 0.35, rnd() * 6.28, 'width');
-    else scatter.flowers(x, z, 3, rnd);
+  // Rim: dressing in clusters of 2-5 with gaps between, never a hedge. Tall trees only on the far and
+  // side rims (they hide nothing there), set back so their canopies stay over land; low stuff in front.
+  let run = 0, next = 0.8 + rnd() * 1.5;
+  for (let i = 0; i < outline.length; i++) {
+    const p = outline[i], q = outline[(i + 1) % outline.length];
+    run += Math.hypot(q.x - p.x, q.z - p.z);
+    if (run < next) continue;
+    run = 0; next = 1.6 + rnd() * 2.8;
+    const nearEdge = p.z > HALF_H - 0.2;
+    const count = 2 + Math.floor(rnd() * 4);
+    const tx = -p.nz, tz = p.nx; // tangent along the coast
+    for (let k = 0; k < count; k++) {
+      const along = (rnd() - 0.5) * 1.6, r = rnd();
+      const tall = !nearEdge && r < 0.62;
+      const size = tall ? 1.3 + rnd() * 1.0 : 0;
+      const inset = tall ? 0.45 + size * 0.3 + rnd() * 0.5 : 0.35 + rnd() * 0.45;
+      const x = p.x - p.nx * inset + tx * along, z = p.z - p.nz * inset + tz * along;
+      const sx = x + HALF_W, sy = z + HALF_H;
+      if (blocked(sx, sy, tall ? 0.7 : 0.35)) continue;
+      const inArena = sx > 0.3 && sx < 31.7 && sy > 0.3 && sy < 17.7;
+      if (tall && !inArena) {
+        const m: KitModel = r < 0.12 ? 'trees_A' : r < 0.22 ? 'trees_B' : r < 0.42 ? 'tree_A' : 'tree_B';
+        scatter.add(m, x, z, m.startsWith('trees') ? size + 0.4 : size, rnd() * 6.28, 'height');
+      } else if (r < 0.75) scatter.bush(x, z, 0.2 + rnd() * 0.26, rnd);
+      else if (r < 0.9) scatter.stone(x, z, 0.16 + rnd() * 0.24, rnd);
+      else scatter.flowers(x, z, 3 + Math.floor(rnd() * 3), rnd);
+    }
   }
-  // Interior: small, flat things only (flowers, tufts, pebbles) so they never read as cover.
-  for (let i = 0; i < 260; i++) {
+  // Interior: few, flat things only (flower clusters, half-buried stones) so the ground stays quiet
+  // and never reads as cover or as stray particles.
+  for (let i = 0; i < 70; i++) {
     const sx = 0.5 + rnd() * 31, sy = 0.5 + rnd() * 17;
-    if (blocked(sx, sy, 0.35)) continue;
+    if (blocked(sx, sy, 0.45)) continue;
     const x = sceneX(sx), z = sceneZ(sy), r = rnd();
-    if (r < 0.35) scatter.tuft(x, z, rnd);
-    else if (r < 0.55) scatter.flowers(x, z, 2 + Math.floor(rnd() * 4), rnd);
-    else if (r < 0.62) scatter.add('rock_A', x, z, 0.16 + rnd() * 0.12, rnd() * 6.28, 'width');
-    else if (r < 0.66) scatter.bush(x, z, 0.2 + rnd() * 0.1, rnd);
+    if (r < 0.55) scatter.flowers(x, z, 3 + Math.floor(rnd() * 3), rnd);
+    else if (r < 0.75) scatter.stone(x, z, 0.12 + rnd() * 0.12, rnd);
   }
   for (const m of scatter.build()) { group.add(m); disposables.push(m); }
 
@@ -157,7 +166,6 @@ export function buildIsland(kit: Kit, buildings: readonly LayoutBuilding[], obst
     group,
     update(time: number) {
       // Foam breathes slowly; ponds shimmer a touch. Cheap uniforms/scalars only.
-      shoreMat.opacity = 0.85 + 0.15 * Math.sin(time * 0.8);
       waterTime.value = time;
       for (let i = 0; i < ponds.length; i++) ponds[i].rotation.y = Math.sin(time * 0.3 + i) * 0.05;
     },
@@ -194,29 +202,43 @@ function makeOutline(rnd: () => number): V2[] {
 }
 
 function cliffGeometry(outline: V2[], rnd: () => number): THREE.BufferGeometry {
-  // [outward offset, height, colour] per ring; jitter on the lower rings gives the faceted rock face.
-  // The face flares outward as it drops so the 56 degree camera sees it below the grass lip.
+  // A thick earth skirt under the grass: the grass lip rolls over the edge with a slight overhang,
+  // then strata bands of dirt drop into the water. [outward offset, height, colour, jitter] per ring.
+  // Winding: (upper i, upper i+1, lower i) along the outline faces outward (the outline runs clockwise seen from above).
+  const Y = ISLAND.waterY;
   const rings: [number, number, string, number][] = [
-    [0, 0, PAL.grassEdge, 0], [0.05, -0.12, PAL.grassEdge, 0], [0.1, -0.22, PAL.cliff, 0.03],
-    [0.28, -0.7, PAL.cliff, 0.1], [0.5, -1.2, PAL.cliffDark, 0.14], [0.9, -2.2, PAL.cliffDark, 0.08],
+    [0, 0, PAL.grass, 0], [0.07, -0.05, PAL.grassEdge, 0], [0.1, -0.14, PAL.grassEdge, 0.02], [0.04, -0.22, PAL.cliffLight, 0.03],
+    [0.08, Y * 0.36, PAL.cliffLight, 0.06], [0.12, Y * 0.42, PAL.cliff, 0.05], [0.16, Y * 0.66, PAL.cliff, 0.08],
+    [0.2, Y * 0.72, PAL.cliffDark, 0.05], [0.28, Y * 0.98, PAL.cliffDark, 0.06], [0.34, Y * 1.02, PAL.cliffBase, 0.04], [0.55, Y * 1.6, PAL.cliffBase, 0.1],
   ];
   const n = outline.length, cols = rings.map((r) => new THREE.Color(r[2]));
   const ringPts = rings.map(([o, y, , j]) => outline.map((p) => {
     const jo = o + (rnd() - 0.5) * j * 2, jy = y + (rnd() - 0.5) * j;
     return new THREE.Vector3(p.x + p.nx * jo, jy, p.z + p.nz * jo);
   }));
+  // Baked facet shading (warm light from the upper left, toward the viewer) so the cliff keeps its
+  // palette brown instead of falling into the sun's shadow side.
+  const L = new THREE.Vector3(-0.45, 0.75, 0.5).normalize();
   const pos: number[] = [], col: number[] = [];
+  const e1 = new THREE.Vector3(), e2 = new THREE.Vector3(), nrm = new THREE.Vector3(), c = new THREE.Color();
+  const tri = (a: THREE.Vector3, b: THREE.Vector3, d: THREE.Vector3, base: THREE.Color) => {
+    e1.subVectors(b, a); e2.subVectors(d, a); nrm.crossVectors(e1, e2).normalize();
+    const shade = 0.72 + 0.4 * Math.max(0, nrm.dot(L));
+    c.copy(base).multiplyScalar(shade);
+    for (const v of [a, b, d]) { pos.push(v.x, v.y, v.z); col.push(c.r, c.g, c.b); }
+  };
   for (let k = 0; k < rings.length - 1; k++) {
-    const A = ringPts[k], Bp = ringPts[k + 1], c = cols[k + 1];
+    const A = ringPts[k], Bp = ringPts[k + 1], cc = cols[k + 1];
     for (let i = 0; i < n; i++) {
       const i2 = (i + 1) % n;
-      for (const v of [A[i], Bp[i], A[i2], A[i2], Bp[i], Bp[i2]]) { pos.push(v.x, v.y, v.z); col.push(c.r, c.g, c.b); }
+      tri(A[i], A[i2], Bp[i], cc);
+      tri(A[i2], Bp[i2], Bp[i], cc);
     }
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-  return faceted(g);
+  return g;
 }
 
 function waterGeometry(): THREE.BufferGeometry {
@@ -234,22 +256,47 @@ function waterGeometry(): THREE.BufferGeometry {
 }
 
 function shoreGeometry(outline: V2[]): THREE.BufferGeometry {
-  // Bands: foam at the cliff foot, then shallow water fading into the sea.
-  const bands: [number, string, number][] = [[-0.3, '#FFFFFF', 0.75], [0.12, '#FFFFFF', 0.6], [0.2, PAL.waterLight, 0.7], [1.6, PAL.waterLight, 0]];
-  const n = outline.length, pos: number[] = [], col: number[] = [], idx: number[] = [];
-  bands.forEach(([o, c, a]) => {
+  // Bands outward from the cliff foot: a bright foam line, a pale shallow ring, then open water.
+  // [offset from the grass outline, colour, alpha, wobble weight]
+  const bands: [number, string, number, number][] = [
+    [0.2, '#FFFFFF', 0.95, 0], [0.42, '#FFFFFF', 0.8, 1], [0.54, '#E8F6FF', 0.45, 1], [0.75, PAL.waterShallow, 0.7, 0.6], [2.4, PAL.waterShallow, 0, 0.2],
+  ];
+  const n = outline.length, pos: number[] = [], col: number[] = [], nrm: number[] = [], wob: number[] = [], idx: number[] = [];
+  bands.forEach(([o, c, a, w]) => {
     const cc = new THREE.Color(c);
-    for (const p of outline) { pos.push(p.x + p.nx * o, 0, p.z + p.nz * o); col.push(cc.r, cc.g, cc.b, a); }
+    for (const p of outline) { pos.push(p.x + p.nx * o, 0, p.z + p.nz * o); col.push(cc.r, cc.g, cc.b, a); nrm.push(p.nx, p.nz); wob.push(w); }
   });
   for (let k = 0; k < bands.length - 1; k++) for (let i = 0; i < n; i++) {
     const a = k * n + i, b = k * n + ((i + 1) % n), c = (k + 1) * n + i, d = (k + 1) * n + ((i + 1) % n);
-    idx.push(a, c, b, b, c, d);
+    idx.push(a, b, c, b, d, c); // up-facing: the outline runs clockwise seen from above
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   g.setAttribute('color', new THREE.Float32BufferAttribute(col, 4));
+  g.setAttribute('aN', new THREE.Float32BufferAttribute(nrm, 2));
+  g.setAttribute('aW', new THREE.Float32BufferAttribute(wob, 1));
   g.setIndex(idx);
   return g;
+}
+
+/** Foam that laps: the outer bands breathe in and out along the shore normal, out of phase along the coast. */
+function shoreMaterial(time: { value: number }): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    uniforms: { uTime: time },
+    transparent: true, depthWrite: false,
+    vertexShader: `attribute vec4 color; attribute vec2 aN; attribute float aW; varying vec4 vC;
+      uniform float uTime;
+      void main(){
+        vec3 p = position;
+        float ph = p.x * 0.55 + p.z * 0.8;
+        p.xz += aN * aW * (0.09 * sin(uTime * 0.9 + ph) + 0.04 * sin(uTime * 1.7 - ph * 1.3));
+        vC = color;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+      }`,
+    fragmentShader: `varying vec4 vC; void main(){ gl_FragColor = vC;
+      #include <colorspace_fragment>
+      }`,
+  });
 }
 
 function pondGeometry(r: number, rnd: () => number): THREE.BufferGeometry {
@@ -291,14 +338,14 @@ function paintGround(outline: V2[], buildings: readonly LayoutBuilding[], obstac
   };
   // Large soft patches of lighter and darker grass.
   for (let i = 0; i < 70; i++) {
-    patch(B.minX + rnd() * (B.maxX - B.minX), B.minZ + rnd() * (B.maxZ - B.minZ), 0.9 + rnd() * 2.0, i % 2 ? PAL.grassLight : PAL.grassDark, 0.6);
+    patch(B.minX + rnd() * (B.maxX - B.minX), B.minZ + rnd() * (B.maxZ - B.minZ), 1.2 + rnd() * 2.2, i % 2 ? PAL.grassLight : PAL.grassDark, 0.3);
   }
   // Fine blade flecks so the grass is not a flat fill up close.
   g.lineCap = 'round';
   for (let i = 0; i < 2600; i++) {
     const x = B.minX + rnd() * (B.maxX - B.minX), z = B.minZ + rnd() * (B.maxZ - B.minZ);
     g.strokeStyle = rnd() < 0.5 ? PAL.grassLight : PAL.grassDark;
-    g.globalAlpha = 0.5; g.lineWidth = 0.035;
+    g.globalAlpha = 0.35; g.lineWidth = 0.035;
     g.beginPath(); g.moveTo(x, z); g.lineTo(x + (rnd() - 0.5) * 0.08, z - 0.1 - rnd() * 0.06); g.stroke();
   }
   g.globalAlpha = 1;
@@ -350,6 +397,7 @@ class Scatter {
   private bushes: { m: THREE.Matrix4; c: THREE.Color }[] = [];
   private tufts: THREE.Matrix4[] = [];
   private flowerItems: { m: THREE.Matrix4; c: THREE.Color }[] = [];
+  private stones: { m: THREE.Matrix4; c: THREE.Color }[] = [];
   private readonly q = new THREE.Quaternion();
   private readonly up = new THREE.Vector3(0, 1, 0);
 
@@ -378,12 +426,20 @@ class Scatter {
     this.tufts.push(new THREE.Matrix4().compose(new THREE.Vector3(x, 0, z), this.q.setFromAxisAngle(this.up, rnd() * 6).clone(), new THREE.Vector3(s, s, s)));
   }
   flowers(x: number, z: number, n: number, rnd: () => number): void {
+    // A tight clump of blossoms big enough to read as flowers (4-6 px at 720p), not as dust.
     const cols = ['#F4F1E0', '#FFE98A', '#F7A8BC', '#C9B0F0'];
     const c = new THREE.Color(cols[Math.floor(rnd() * cols.length)]);
     for (let i = 0; i < n; i++) {
-      const a = rnd() * 6.28, d = rnd() * 0.3;
-      this.flowerItems.push({ m: new THREE.Matrix4().compose(new THREE.Vector3(x + Math.cos(a) * d, 0.06, z + Math.sin(a) * d), this.q.identity().clone(), new THREE.Vector3(1, 1, 1)), c });
+      const a = rnd() * 6.28, d = i ? 0.1 + rnd() * 0.14 : 0, s = 0.8 + rnd() * 0.4;
+      this.flowerItems.push({ m: new THREE.Matrix4().compose(new THREE.Vector3(x + Math.cos(a) * d, 0.07, z + Math.sin(a) * d), this.q.setFromAxisAngle(this.up, rnd() * 6).clone(), new THREE.Vector3(s, s, s)), c });
     }
+  }
+  /** A faceted stone, squashed and partly buried so it sits in the ground. */
+  stone(x: number, z: number, size: number, rnd: () => number): void {
+    const c = new THREE.Color(['#9AA3B0', '#8D97A6', '#A9AEB6', '#838C99'][Math.floor(rnd() * 4)]);
+    const sy = size * (0.55 + rnd() * 0.35);
+    const e = new THREE.Euler((rnd() - 0.5) * 0.5, rnd() * 6.28, (rnd() - 0.5) * 0.5);
+    this.stones.push({ m: new THREE.Matrix4().compose(new THREE.Vector3(x, sy * (0.25 + rnd() * 0.3), z), new THREE.Quaternion().setFromEuler(e), new THREE.Vector3(size * (0.9 + rnd() * 0.4), sy, size)), c });
   }
 
   build(): (THREE.InstancedMesh)[] {
@@ -417,9 +473,20 @@ class Scatter {
       im.receiveShadow = true;
       out.push(im);
     }
+    if (this.stones.length) {
+      // Jittered icosahedron: irregular facets read as stone, not as a regular pentagon.
+      const g = new THREE.IcosahedronGeometry(1, 0);
+      const pa = g.getAttribute('position'), jr = mulberry32(77);
+      const key = (i: number) => `${pa.getX(i).toFixed(3)},${pa.getY(i).toFixed(3)},${pa.getZ(i).toFixed(3)}`;
+      const moved = new Map<string, number>();
+      for (let i = 0; i < pa.count; i++) { const k = key(i); let f = moved.get(k); if (f === undefined) { f = 0.78 + jr() * 0.4; moved.set(k, f); } pa.setXYZ(i, pa.getX(i) * f, pa.getY(i) * f, pa.getZ(i) * f); }
+      const im = new THREE.InstancedMesh(faceted(g), toonNew(PAL.white), this.stones.length);
+      this.stones.forEach((st, i) => { im.setMatrixAt(i, st.m); im.setColorAt(i, st.c); });
+      im.castShadow = true; im.receiveShadow = true;
+      out.push(im);
+    }
     if (this.flowerItems.length) {
-      const g = faceted(new THREE.OctahedronGeometry(0.045, 0));
-      g.scale(1, 0.6, 1);
+      const g = faceted(new THREE.CylinderGeometry(0.075, 0.06, 0.04, 5));
       const im = new THREE.InstancedMesh(g, toonNew(PAL.white), this.flowerItems.length);
       this.flowerItems.forEach((f, i) => { im.setMatrixAt(i, f.m); im.setColorAt(i, f.c); });
       im.receiveShadow = true;

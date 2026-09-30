@@ -45,7 +45,7 @@ function segmented<T extends string | number>(label: string, opts: { v: T; t: st
   return h('div', { class: 'set-row' }, h('span', { class: 'set-label' }, label), group);
 }
 
-export const ASSIST_LINE = 'After each lost run your buildings hatch 5% faster, up to 30%. Resets when you win. Never locks anything.';
+export const ASSIST_LINE = 'Hatch faster after lost runs. Never locks anything.';
 
 export function settingsScreen(m: SettingsModel, ctx: Ctx): ScreenInst {
   const el = shell('settings', 'Settings');
@@ -63,22 +63,22 @@ export function settingsScreen(m: SettingsModel, ctx: Ctx): ScreenInst {
     segmented('Team colours', [{ v: 'default', t: 'Default' }, { v: 'orange', t: 'Orange' }, { v: 'highContrast', t: 'Bold' }], () => s.colorMode, v => { s.colorMode = v; }, emit),
     segmented<UiScale>('UI size', [{ v: 1, t: '100%' }, { v: 1.25, t: '125%' }, { v: 1.5, t: '150%' }], () => s.uiScale, v => { s.uiScale = v; }, emit));
   const controls = h('section', { class: 'set-sec', 'aria-label': 'Controls' }, h('h2', null, 'Controls'),
-    segmented('Fire button', [{ v: 'hold', t: 'Hold' }, { v: 'toggle', t: 'Toggle' }], () => s.fireMode, v => { s.fireMode = v; }, emit),
+    segmented('Throw button', [{ v: 'hold', t: 'Hold' }, { v: 'toggle', t: 'Toggle' }], () => s.fireMode, v => { s.fireMode = v; }, emit),
     toggle('Aim assist', () => s.aimAssist, v => { s.aimAssist = v; }, emit),
     toggle('Show hints', () => s.showHints, v => { s.showHints = v; }, emit));
   const help = h('section', { class: 'set-sec', 'aria-label': 'Assist' }, h('h2', null, 'Assist'),
-    toggle('Assist mode', () => s.assist, v => { s.assist = v; }, emit, ASSIST_LINE),
-    h('div', { class: 'set-row' }, h('span', { class: 'set-label' }, 'Progress'),
-      btn('Reset progress', () => ctx.confirm({
-        text: 'Reset all progress?', detail: 'Unlocks, Codex and Crown Levels are erased. Settings stay.',
-        yes: 'Reset progress', no: 'Keep progress', onYes: m.onResetProgress, danger: true,
-      }), { kind: 'danger', size: 'sm' })));
+    toggle('Assist mode', () => s.assist, v => { s.assist = v; }, emit, ASSIST_LINE));
 
+  // Destructive, so it is a small footer link behind a confirmation, never a section control.
+  const reset = btn('Reset progress', () => ctx.confirm({
+    text: 'Reset all progress?', detail: 'Unlocks, Codex and Crown Levels are erased. Settings stay.',
+    yes: 'Reset progress', no: 'Keep progress', onYes: m.onResetProgress, danger: true,
+  }), { kind: 'link', size: 'sm', cls: 'reset-link' });
   const back = btn('Done', m.onBack, { kind: 'gold', size: 'md', verb: 'back' });
   el.append(h('div', { class: 'card settings-card tilt-l' },
     title('Settings', 'card-title'),
     h('div', { class: 'set-grid' }, h('div', { class: 'set-col' }, sound, screen), h('div', { class: 'set-col' }, controls, help)),
-    h('div', { class: 'foot-row' }, back)));
+    h('div', { class: 'foot-row' }, reset, back)));
   (el.querySelector('.slider') as HTMLElement | null)?.setAttribute('data-autofocus', '');
   return { el, back: m.onBack };
 }

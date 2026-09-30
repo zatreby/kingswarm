@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import type { World, Team, SimEvent, Hero } from '../sim/types';
 import { loadKit, type Kit } from './assets';
 import { CameraRig } from './camera';
-import { buildIsland, ISLAND_BOUNDS, type Island } from './island';
+import { buildIsland, ISLAND, ISLAND_BOUNDS, type Island } from './island';
 import { Buildings } from './buildings';
 import { Critters } from './critters';
 import { Kings } from './kings';
@@ -41,8 +41,9 @@ export interface RendererDebug {
 }
 
 const LIGHT = {
-  sky: '#D6ECFF', ground: '#7C8F55', hemi: 1.55,
-  sun: '#FFF0D8', sunI: 1.9,
+  // Afternoon grade: warm gold key, cool blue-violet fill so shade reads cool and units pop off the grass.
+  sky: '#C3D0FF', ground: '#7F7A9A', hemi: 1.5,
+  sun: '#FFE2AE', sunI: 2.05,
   /** Sun comes from the upper left of the screen (-x, far -z); shadows fall to the lower right. */
   sunDir: [-0.62, 1.3, -0.52] as const,
   shadowRadius: 3,
@@ -85,7 +86,7 @@ export async function createRenderer(container: HTMLElement): Promise<Renderer &
 
   const rig = new CameraRig();
   const B = ISLAND_BOUNDS;
-  rig.setFitBounds(Math.max(-B.minX, B.maxX) + 0.3, Math.max(-B.minZ, B.maxZ) + 0.2, 2.8);
+  rig.setFitBounds(Math.max(-B.minX, B.maxX) + 0.3, Math.max(-B.minZ, B.maxZ) + 0.2, 2.8, -ISLAND.waterY + 0.05);
 
   const buildings = new Buildings(kit);
   const critters = new Critters();

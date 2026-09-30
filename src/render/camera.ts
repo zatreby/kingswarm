@@ -21,13 +21,13 @@ export class CameraRig {
   /** Scene-space points that must stay in frame (island outline corners and tall rim props). */
   private fitPoints: THREE.Vector3[] = [];
 
-  setFitBounds(halfW: number, halfH: number, backHeight: number): void {
+  setFitBounds(halfW: number, halfH: number, backHeight: number, cliffDepth: number): void {
     this.fitPoints = [
       new THREE.Vector3(-halfW, 0, -halfH), new THREE.Vector3(halfW, 0, -halfH),
       new THREE.Vector3(-halfW, 0, halfH), new THREE.Vector3(halfW, 0, halfH),
       new THREE.Vector3(-halfW, backHeight, -halfH), new THREE.Vector3(halfW, backHeight, -halfH),
       // cliff bottom at the near edge shows below the grass
-      new THREE.Vector3(-halfW, -1.2, halfH + 0.3), new THREE.Vector3(halfW, -1.2, halfH + 0.3),
+      new THREE.Vector3(-halfW, -cliffDepth, halfH + 0.45), new THREE.Vector3(halfW, -cliffDepth, halfH + 0.45),
     ];
   }
 

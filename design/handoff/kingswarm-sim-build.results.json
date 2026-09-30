@@ -1,0 +1,293 @@
+{
+ "workflow": "kingswarm-sim-build",
+ "script": "design/handoff/workflows/kingswarm-sim-build.js",
+ "stages": [
+  {
+   "label": "sim:core",
+   "phase": "Core",
+   "status": "done",
+   "result": {
+    "built": [
+     "Simulation core in /home/turbo/creative-game/src/sim (pure, deterministic, 60 Hz, plain-data World, imports nothing outside src/sim). Public API is index.ts: createWorld, step, hashWorld, idleInput/idleInputs/input, tuning, MAPS/meadow, deriveMods/defaultMods, heroSpawnPoint, swarmCap, buildingsOwned, plus all of types.ts.",
+     "math.ts: mulberry32 PRNG using Math.imul, with its state in world.rng; rand and randRange; the only wrappers for sin, cos, atan2, exp and log; len, dist2, clamp, finite.",
+     "tuning.ts: one typed `tuning` object grouped into hero, fire, critter, building, match and abilities (per hero), holding every number from the brief plus a few I had to add (solidFrac, steer, separation, stunDrag, arriveEps, follow offsets).",
+     "maps.ts: 'meadow' with the brief's Blue Throne and 5 huts. The sim always adds the Crown at (16,9). Four flank obstacles per half (trees 2,11; rock 6.5,16.5; pond 3.5,3.5; rock 13.5,3), mirrored for Red. A spec checks that no obstacle blocks the direct route between any two buildings within 10 units, or overlaps a capture zone.",
+     "world.ts: createWorld mirrors the map. Thrones are owned, huts neutral, towers owned by their half's team. Each King spawns on his Throne rim facing the centre, with tuning.match.startSwarm (10) followers. It derives world.mods once and gives each building a seeded 0.5-1x first hatch interval.",
+     "step.ts: fixed, documented order: clear events -> clock (time = tick/60) and previous positions -> heroes -> abilities -> fire -> critters -> buildings -> match -> bookkeeping (follower counts, button edges). A finished match is a no-op.",
+     "systems/heroes.ts: acceleration to top speed in 0.1 s, stop in 0.08 s; dash (22 u/s x 0.16 s, the last tick split exactly, i-frames, 2.2 s cooldown, along aim if not moving); regen; Rampage (speed x1.3, cooldowns x2); 1 s respawn grace; auto-swing every 0.4 s; sliding on obstacles and building cores; arena clamp.",
+     "systems/fire.ts: recall on the rising edge; volleys of up to 3 followers closest to the clamped aim point every 0.13 s (at most one tick of carry-over), scatter +-0.35, flight time = distance/15.5 + 0.12 s; with no followers, a 0.4 s wait and noAmmo at most once per second. Landing: splash plus knockback on critters within 0.7, 4 damage to a King within 0.9, then garrison if inside a capture zone (keeping its landing spot), else hold 2.5 s.",
+     "systems/critters.ts: follow, home, hold and garrison behaviour. Hold is topped up to 1 s while an enemy is near, then goes home; a garrison defends within r+1.75 of its building. Also soft separation, steering around solids (head-on approaches pick a fixed side), stun coasting, and melee: bites every 0.7 s, 2 damage to Kings. A critter's hp drops at the bite, but deaths are applied at the end of the pass, so an exchange is simultaneous and a lower pool index gives no edge.",
+     "systems/buildings.ts: presence (critter 1, King 4), neutral capture with claimant reset, drain and flip to 30, regain at 25/s, contested freeze; a captured enemy Throne wins; any capture in overtime wins. Hatching under cap = 14 + 7 x owned buildings; Frenzy x2 and TeamSetup.hatchMul both apply. Towers fire every 0.6 s.",
+     "systems/targeting.ts: shared nearest-enemy selection and shooting for towers and turrets; skips an invulnerable King.",
+     "systems/abilities.ts: Stomp, Kingscall (may exceed cap), Blink (followers move with him), Vortex (instant pull impulse, stun, King pulled up to 2.25, plus a presentation-only 'vortex' zone), Turret (lives 12 s, fires every 0.45 s), Rampart. All trigger on the rising edge and fail silently on cooldown, stun or death; each emits 'ability' with its hit count.",
+     "systems/match.ts: Crown opens -> phase 'crown', Frenzy, crownOpen event; Crown hold accrues from the tick after opening, decays 0.5/s when absent, freezes when contested, wins at 10 s. Time-out: more buildings wins, a tie goes to overtime. endMatch is idempotent.",
+     "grid.ts: one typed-array spatial hash per team, with a single-pass nearest-enemy search and separation, no per-tick allocation. solids.ts: push-out, arena clamp, avoidance steering. combat.ts: the only places hp changes (critter/King damage, knockback, death, Rampage, stats, events). spawn.ts: critter pool and state transitions. mods.ts: the Mutation seam. hash.ts: 32-bit hash over the exact bits of every gameplay field.",
+     "input.ts: idleInput, input(partial), idleInputs. testing.ts (not exported from index): bareWorld, put, placeHero, run, runUntil, noHatch, and a crude deterministic botInput/botInputs used by the harness specs."
+    ],
+    "verified": "npx tsc --noEmit: clean. npx vitest run src/sim: 12 files, 177 tests, all green on five consecutive full runs, the last after the final change. I watched the specs fail before the code existed; each later behaviour change (tower target filter, simultaneous bites) went red first, then green. I also ran the sim as the next layers will: 20 default-config matches (150 s, Crown at 90 s) with the scripted bots under plain Node via tsx. All 20 reached 'over' by Throne capture in 33-70 s, at 0.063 ms per step, peaking at 112 live critters. A stress profile (200 immortal critters in one 100-vs-100 brawl) costs about 0.28-0.38 ms per step alone and 0.5 ms (best batch) in the full contended suite. A 200-match fairness check: Blue 61 / Red 39 with default bot timing, 52 / 48 when the bot button schedules are swapped between teams, so the lean comes from the script, not the sim. I checked that the GDD edit in commit 263b1cf only touched section 6 (rivals); sections 3-5 are unchanged since I read them.",
+    "test_summary": "177 tests in 12 files, all passing. purity: bans Math.random, Date, performance, document, window and timers in every non-spec sim file, bans approximated maths (sin/cos/atan2/exp/log/pow/hypot/**) outside math.ts, and bans imports from outside src/sim. math: PRNG repeatability, range, integer state. world: mirroring, ownership, start swarm, pool ids, default mods, JSON round-trip, seeded jitter. maps: brief layout, 3-4 obstacles, clear routes and zones. heroes: acceleration and stop timing, diagonal clamp, per-hero speed, arena clamp, obstacle slide, solid building cores, aim, NaN input, dash distance/edge/cooldown/i-frames, damage events and stats, regen after 3 s, death -> followers hold + Rampage + kills, 5 s respawn with grace, Rampage speed and cooldowns, shield, swing range/damage/knockback/interval. fire: 3 per volley, 8 volleys in 1 s, closest-to-aim selection, range clamp, flight time, no hits in the air, flying over obstacles, noAmmo throttle, no fire while stunned, landing splash and knockback, King hit, garrison on a building, hold -> home -> follow, hold refresh near enemies, recall with count and edge. critters: mutual melee to the death, simultaneous resolution regardless of pool order, bite interval, King bites, aggro limit, followers keep up with a Blink King, home -> follow, separation, walking around obstacles and building cores head-on, arena clamp, King falls -> hold -> garrison at nearest building. buildings: neutral rate, King counts 4, x3 cap, claimant reset, contested freeze, drain + flip to 30, regain, reversible flip, Throne capture wins, hatch intervals for throne and hut, cap, Frenzy and hatchMul, towers (range, rate, King damage, ignore an invulnerable King, never hatch, shoot for the current owner). match: clock, Crown opening, accrual only after opening, 10 s win, decay and contest, Crown still capturable and hatching, time-out win, overtime then capture win, no-op after 'over'. abilities: all 6 plus edge/cooldown/stun/dead rules and zone expiry. determinism: 3000 ticks of scripted play give identical hashes, hashes match tick by tick for 600 ticks, a different seed diverges, the hash reacts to a 1e-9 change. Full match: 3 seeds reach 'over' with every position, velocity and hp finite on every tick, emitting throw/land/hatch/capture/crownOpen/matchEnd. perf: best of five 200-step batch averages under 1 ms with about 200 live critters.",
+    "fragile_or_unfinished": [
+     "Balance risk from the brief's capture numbers: an undefended Throne falls in 1.7-2.5 s (a King alone drains 40/s; 8+ critters drain 60/s). Hatchlings run off to their King rather than defend. With the crude harness bots, all 20 default matches ended by Throne in 33-70 s, before the Crown opens at 90 s. Real AI may change this, but the GDD's ending mix (Throne 30-45%, Crown 35-50%) looks at risk.",
+     "The perf spec depends on the machine. Load averages of 5-6 from other jobs roughly double the numbers inside Vitest, so it asserts on the best of five batch averages, not the median. Measured best is about 0.5 ms in the contended suite and 0.3 ms alone, for a worst-case immortal 200-critter brawl.",
+     "Cross-engine exactness: STUN_DECAY (critters.ts) and COAST_K (abilities.ts) are computed once at module load with exp/log from math.ts. They could differ in the last bit between browsers. For lockstep or replays, hardcode them or swap in exact math.ts versions.",
+     "The spatial hash widens each scan by only 0.25 units for movement after the grid is built. A Vortex-pulled critter can move about 0.26 units per tick, so it can be missed as a target or separation neighbour for one tick. The miss is deterministic and minor.",
+     "Pool slots are reused: a Critter object reference stays live after its critter dies and a hatchling takes the slot. Presentation must key by id and watch 'hatch' and 'critterDied' events, not hold object references.",
+     "A landed critter can bite on the same tick it lands, so a direct hit on a full-hp critter kills it (2 splash + 1 bite). The prototype behaved the same way, and firing was judged 'great, balanced', so I kept it.",
+     "Stomp puts a 0.25 s coast-stun on flung survivors so they actually fly outward (not in the brief). Home critters use aggro 0.9 (the brief gave no value). Building cores are solid at 0.55 x r for Kings and walking critters (the brief said critters slide around buildings; I applied the same to Kings).",
+     "Towers start owned by their half's team (tuning.building.towersStartOwned). The brief doesn't say; the GDD reads them as a defended zone.",
+     "Mutations are not implemented: deriveMods only carries hatchMul. The explode, secondWind and shot-from-'hut' events are never emitted yet.",
+     "testing.ts botInput is only a harness bot (rushes the nearest unowned building on a fixed button schedule). It is not the AI and has no reaction delay or aim error.",
+     "Module-level scratch buffers (grid, volley picks, hash, foe search) make step non-re-entrant within one JS realm. That is fine for single-threaded use; each worker gets its own copy."
+    ],
+    "contract_changes": [
+     "types.ts Hero: added `swingCd: number` (seconds to the next auto-swing check) and `noAmmoT: number` (noAmmo event throttle).",
+     "types.ts: new `TeamMods` interface (hatchMul, fireIntervalMul, scatterMul, throwRangeMul, flightSpeedMul, capAdd, capMul, startSwarmAdd, critterHpMul, critterSpeedMul, biteMul, garrisonBiteMul, landDamageMul, landKnockMul, landRadiusMul, landStun, dashCdRate, rampageTimeMul). Neutral values mean no change.",
+     "types.ts World: added `mods: [TeamMods, TeamMods]` (derived once in createWorld from TeamSetup) and `thrones: [number, number]` (building index of each Throne).",
+     "Meaning: 'throw' is emitted once per volley. `critter` is the lowest thrown id, x/y is the King's position, tx/ty is the range-clamped aim point before scatter, and `count` is the volley size. Per-critter arcs are in critter state (sx, sy, tx, ty, flightT, flightDur).",
+     "Meaning: 'ability' tx/ty is the effect point. Blink: where the King arrived. Vortex: its centre. Turret: where it was placed. Otherwise: the King's position. `hits` for Kingscall is the number spawned. 'recall' is emitted on every press, even when count is 0.",
+     "Meaning: the 'vortex' Zone is presentation only; the pull is an instant impulse at cast time. World.time is derived as tick/60. The Crown is always added at the arena centre and is the last building. Building order is Blue half, then Red half (same order), then the Crown.",
+     "Start swarm lives at tuning.match.startSwarm, not a top-level tuning.startSwarm.",
+     "createWorld throws if a map has no Throne."
+    ],
+    "notes_for_lead": "You committed a mid-task snapshot of part of src/sim in 263b1cf. The rest of the sim (step, hash, grid, solids, combat, index, all systems, and the determinism/perf/abilities/buildings/critters/match specs) is still uncommitted. Nothing outside src/sim is mine; the other modified paths in git status belong to other agents. Two decisions for you: (1) Throne capture speed. An undefended Throne falls in under 3 s. Options: a Throne-specific drain multiplier, or making hatchlings garrison their home building while an enemy is present. (2) Whether towers should start owned (currently yes, via tuning.building.towersStartOwned). The tools the AI engineer needs are testing.ts runUntil/put/bareWorld and the step order documented in step.ts."
+   }
+  },
+  {
+   "label": "sim:mutations",
+   "phase": "Mutations",
+   "status": "done",
+   "result": {
+    "built": [
+     "All 22 Mutations from GDD section 4 work as rule rewrites on the per-team TeamMods seam. TeamMods stays plain data, derived once in createWorld; systems check a flag or number at each call site, so an unmutated battle pays one branch per site.",
+     "/home/turbo/creative-game/src/sim/mutations.ts is the catalogue the UI reads (exported from index.ts). Each entry has id, name, tags, text (verbatim from the GDD), requires (the two tags a Duo needs, empty otherwise) and apply(m). apply is the one place that defines each Mutation's numbers and flags. Also exports MUTATION_BY_ID and canOffer(id, owned): no duplicates, and a Duo only once both its tags are owned. The file header maps every behaviour rule to the function that implements it.",
+     "/home/turbo/creative-game/src/sim/mutated.ts holds the behaviour rules, each named after its Mutation: birth (Bombers 1-in-4 by a per-team counter, Brutes), bomberBlast (+ Cryo Bombs), settleDeaths (Splitters, Chain Reaction), dropScorch/burnScorch, pierce, homeIn, archerShot, trample, royalGuard/spawnGuard, militia, bloodrage.",
+     "/home/turbo/creative-game/src/sim/combat.ts gained the hit and fall rewrites so every hit path gets them: impactCritter/impactHero (Shockwave, Frostbite, Leeches on landings, Bomber blasts and Piercer paths), leech (also on bites), secondWind, conscription, and a Bloodrage hit count in damageHero. Deaths with after-effects go into a queue that step drains between systems, so a death never spawns Runts or explodes in the middle of a pass over the pool. The queue is keyed to its World.",
+     "/home/turbo/creative-game/src/sim/kinds.ts resolves per-kind stats once from tuning.kinds: runt 1 HP and a 1.4 s bite interval; brute 9 HP, speed x0.75, landing splash 1.0 for 3 (6 to a King); guard 5 HP.",
+     "Wiring: fire.ts (Guards are never picked for a volley, Homing, flat Piercer flight at 26 u/s with the landing splash skipped, per-kind splash, Bombers explode on landing and are spent, Scorch on every landing). critters.ts (kind speed and bite interval; a Guard's aggro is 2.2 around the King, and a Guard waits in hold instead of garrisoning while his King is dead). heroes.ts (Trample during the dash, Bloodrage end check). buildings.ts (Guards don't count toward the cap, Boomtown, Archer Huts on owned huts and Throne, Militia on capture, Royal Guard replacement). abilities.ts (Kingscall hatches through birth, Scorch burn pulses). world.ts (Big Litter fills the start swarm to cap, 5 Guards at start). step.ts (settleDeaths after each system; Guards excluded from the follower count). hash.ts (all new fields; booleans hash as 0/1). grid.ts (a team re-check, because Conscription can flip a critter's team after the grid is built).",
+     "Numbers: tuning.kinds and tuning.mutations.* hold every brief value plus the ones I chose (listed under fragile). Frostbite needed the existing slow multipliers changed: critter.slowSpeedMul 0.5 -> 0.6, hero.slowSpeedMul 0.6 -> 0.75. Nothing set slowT before this, so no existing behaviour changed.",
+     "Specs: mutations.boom/brood/bite/king.test.ts hold a focused describe per Mutation (with and without it). mutations.test.ts covers the catalogue and deriveMods. mutations.soak.test.ts covers determinism, the soak, and World isolation of the death queue. testing.ts gained mutWorld, drop (a critter lands at an exact spot next tick), put(..., kind), and clearCritters now resets born."
+    ],
+    "verified": "npx vitest run src/sim: 18 files, 271 tests, all green on three consecutive full runs after the last change. npx tsc --noEmit: zero errors in src/sim. The only remaining tsc errors are 12 in src/ai/*.test.ts (missing ./bot, ./match, ./profiles), which is another agent's work in progress. An earlier src/ui error has since cleared.\\n\\nRed first: I wrote all specs before the code and saw them fail. That first failure was blunt (the born field didn't exist yet), so I also ran a mutation check. I replaced each of the 22 apply() bodies with a no-op, one at a time, and ran the four per-Mutation spec files. Each time, only that Mutation's own describe went red (1-2 tests each), then I restored the file (diff-checked). The World-isolation spec fails with the guard removed and passes with it.\\n\\nI ran the sim the way the next layers will, under plain Node via tsx:\\n- Heavy loadout on both sides (bigLitter, splitters, chainReaction, scorch, rapidFire, bombers, piercers; brawler vs warden), 3 seeds: 0.12-0.37 ms/step average, peak 81-85 live critters, 350-440 explosions and 320-400 spawns per match. Worst single step was 14 ms on the first seed (JIT warm-up) with the load average around 8.\\n- Unmutated bot match: 0.099 ms/step.\\n- Perf spec (unmutated 200-critter brawl): best batch 0.56-0.75 ms under contention.\\n\\nCrude power reading: each single Mutation vs a plain rival, 10 seeds with sides swapped on odd seeds. Win counts: none 6, piercers 10, splitters 9, bigLitter 9, scorch 8, trample 8, bombers 4, shockwave 5, longArm 5, the rest 6-7. Every match still ended by Throne capture.",
+    "test_summary": "271 tests in 18 files, all passing: the 177 existing ones plus 94 new. Per Mutation, each with the Mutation absent as a control:\\n- Bombers: 2 of a 10-critter start swarm, hatch cadence critter x3 then bomber, blast r1.5 for 3/8, the Bomber is spent, a plain landing only splashes 0.7.\\n- Shockwave: at least 2x knock distance, 0.4 s stun, own team only.\\n- Scorch: patch r0.9 for 3 s, 1 damage per 0.5 s, Kings unaffected, capped at 24 per team with the oldest replaced.\\n- Splitters: 2 Runts at 1 HP holding where the critter died; Runts and exploded Bombers don't split, a Bomber killed before its throw does; Runts bite every 1.4 s.\\n- Boomtown: 1.6x hatch only when behind on buildings.\\n- Militia: 3 free garrisons on capture, bypassing the cap; garrisons bite for 2.\\n- Big Litter: cap +10, starts at cap.\\n- Brutes: all brutes at 9 HP, cap halved, speed ratio 0.75, landing splash 1.0 for 3.\\n- Leeches: +2 on a landing and on a bite, capped at max HP.\\n- Frostbite: slowT 2 on critters and the King; speed ratios 0.6 and 0.75.\\n- Piercers: flat, duration = distance/26, 2 damage once per critter on the path, 4 to the King, nobody off the path, no landing splash.\\n- Homing: pulled to the nearest enemy within 2, the King if he is nearest, nothing beyond 2.\\n- Archer Huts: hut 1 damage every 0.9 s, the Throne shoots, King 3, nothing out of range.\\n- Trample: each critter in the dash path takes 3 once, dash back after 1.32 s vs 2.2 s.\\n- Royal Guard: 5 at start, never thrown, not counted as ammo, replaced one every 6 s, intercepts at 1.9 from the King where a plain follower does not.\\n- Rapid Fire: at least 12 volleys/s, spread over 0.35 but within 0.63.\\n- Long Arm: range 11.55, flight speed x1.25.\\n- Second Wind: 50% HP, event, stun 0.8 and knockback within 3, once only.\\n- Chain Reaction: r0.9 for 2, cascades, Runts never split.\\n- Cryo Bombs: 1 s freeze on critters and the King, frozen: true on the event.\\n- Conscription: within 4 switch team and go home, beyond 4 stay.\\n- Bloodrage: 3 hits end it but not before 8 s, the third hit after 8 s ends it, 25 s cap, 8 s without it.\\nCatalogue: 22 ids in GDD order, names, tags and text, Duo requirements, canOffer, deriveMods neutral / non-neutral per Mutation / duplicates ignored / plain data. Determinism: two mixed loadouts (5-7 Mutations a side, all 22 covered between them) give identical hashes on every tick for up to 1800 aggressive ticks, and Mutations change the hash. Soak: 6 seeded random pairs (random hero plus 5 random Mutations, Duos allowed) x 3000 ticks of aggressive input, finished matches restarted. Every tick checks finite hero, critter, zone and building values; no living critter at 0 HP; valid garrison indices; no Guard ever flying; Guard count within guardCount; Scorch within its cap. The soak also sees explode and spawn events. createWorld leaves no events behind.",
+    "fragile_or_unfinished": [
+     "Balance is untested beyond crude bots. In 10-seed single-Mutation runs Piercers won 10/10 and Splitters and Big Litter 9/10, which suggests they may be strong; Bombers 4/10 may be weak. The sample is tiny and the harness bot is not the AI.",
+     "The pre-existing ending problem is unchanged: every bot match, mutated or not, ends by Throne capture well before the Crown. The Mutations make neither better nor worse.",
+     "Cryo Bombs stuns the King for 1 s per blast, as the brief says. Bombers plus Rapid Fire can keep a King stun-locked. Consider a shorter or non-refreshing freeze for Kings.",
+     "Values I chose (not in the brief): Guard HP 5, Guard follow ring 0.55-0.95, Brute landing damage to a King 6, Piercer King reach 0.9, Runt spread 0.2, Trample reach 0.9 with knock 4, Second Wind knock 10. Chain Reaction also hits the King for 2. Explosions knock back at the landing knock (7). Pierce hits and Bomber blasts count as landings, so Shockwave, Frostbite and Leeches apply to them. Scorch drops on every landing, Bombers and Piercers included.",
+     "Bombers cadence counts every critter born to the team (hatch, Kingscall, start swarm, Militia) via World.born. Runts and Guards are not counted.",
+     "Guards don't count toward the swarm cap and are exempt from Conscription. While their King is dead they hold in place (they never garrison) and walk back after he respawns.",
+     "Deferred death effects: Runts and Chain Reaction blasts resolve after the current system, not at the instant of death. Deaths queued past 1024 in one step are dropped. That shouldn't happen, because each normal death yields at most 2 Runts, which never split.",
+     "Piercer and Trample hit-once memory is one key per victim (struckBy). If two sweeps hit the same critter alternately in one flight, it can be struck twice by the first. Very unlikely.",
+     "The spatial-hash team re-check (for Conscription flips) adds one compare per candidate in the hot aggro path; the perf spec still passes.",
+     "Module-level scratch (death queue, homing and closest-point results, blastHitHero) adds to the existing non-re-entrancy of step. The death queue is keyed to its World so it can't leak between worlds.",
+     "Mutation-created critters emit the new 'spawn' event; Kingscall still emits none, so render must keep scanning the pool by id. The 'explode' event doesn't say Bomber vs Runt; r tells them apart (1.5 vs 0.9)."
+    ],
+    "contract_changes": [
+     "types.ts: new `MutationTag = 'boom' | 'brood' | 'bite' | 'king'`, the same values as src/ui/types.ts.",
+     "Hero: added `rampageHits` (Bloodrage), `guardT` (Royal Guard replacement timer), `sweepKey` (current Trample dash key) and `struckBy` (last Piercer flight that hit him).",
+     "Critter: added `sweepKey` (own Piercer flight key) and `struckBy` (last sweep that hit it); -1 = none.",
+     "Zone: added `pulseT` (Scorch burn timer; 0 for vortex).",
+     "World: added `born: [number, number]`, the critters born per team; drives the Bomber cadence.",
+     "TeamMods: added bomberEvery, brutes, guardCount, startFull, boomtownMul, militiaGuards and 13 behaviour flags (splitters, chainReaction, cryoBombs, scorch, frostbite, leeches, piercers, homing, archerHuts, trample, secondWind, conscription, bloodrage). The existing fields are now set by Mutations: Shockwave (landKnockMul, landStun), Militia (garrisonBiteMul), Big Litter (capAdd), Brutes (capMul), Trample (dashCdRate), Rapid Fire (fireIntervalMul, scatterMul), Long Arm (throwRangeMul, flightSpeedMul), Bloodrage (rampageTimeMul).",
+     "SimEvent: new `spawn` {team, critter, kind, cause: 'split' | 'guard' | 'militia', x, y} and `conscript` {team, count, x, y}. 'explode', 'secondWind' and 'shot' from 'hut' (also used by an Archer Throne) are now emitted.",
+     "Meaning: with Homing, the 'throw' event's tx/ty is the homed target (the volley's target before scatter).",
+     "Meaning: `Hero.followers` excludes Guards (followers = ammo). createWorld returns with an empty events array.",
+     "tuning.ts: new `kinds` and `mutations` groups, plus an exported `KindTuning` type (tuning.ts now imports a type from types.ts). critter.slowSpeedMul changed 0.5 -> 0.6 and hero.slowSpeedMul 0.6 -> 0.75, to the Frostbite numbers; nothing set slowT before.",
+     "spawnCritter takes an optional `kind` (default 'critter'). killCritter takes an optional `blast` flag: a spent Bomber, which doesn't count as lost and doesn't split.",
+     "index.ts also exports MUTATIONS, MUTATION_BY_ID, canOffer and the MutationDef type."
+    ],
+    "notes_for_lead": "Nothing outside src/sim was touched. src/ui/catalog.ts has its own copy of the Mutation names and text; the UI owner can switch to the sim's MUTATIONS / canOffer, which carry the same strings plus Duo requirements. The tsc errors left in the repo are all in src/ai tests (missing ./bot, ./match, ./profiles), from the AI agent's in-progress work.\\n\\nDecisions for you:\\n1. Cryo Bombs on Kings: keep the 1 s freeze from the brief, or shorten it (stun-lock risk with Rapid Fire).\\n2. Whether pierce hits and Bomber blasts should count as landings for Shockwave, Frostbite and Leeches. I said yes, so combos aren't dead picks.\\n3. Piercers look possibly strong in crude sims.\\n\\nThe whole sim is still uncommitted. I did not commit."
+   }
+  },
+  {
+   "label": "review:determinism-perf",
+   "phase": "Review",
+   "status": "done",
+   "result": {
+    "findings": [
+     {
+      "severity": "minor",
+      "file": "src/sim/systems/buildings.ts",
+      "summary": "When both teams finish a capture on the same tick, the lower building index wins. Blue-half buildings come first, so Red always wins a double Throne capture, even when Blue's attack was further along. The loser's capture still goes through after the match has ended.",
+      "evidence": "buildingsSystem line 21 runs capture() in index order (Blue half, then Red half, then the Crown), and flip() calls endMatch at lines 106-107. In scratchpad/bias.ts each King stands on the rival Throne with equal control (0.1 and 0.5): winner=1 (throne), with events 'team1 took b0, team0 took b1'. With Blue ahead (Red Throne at 0.05, Blue Throne at 0.3; both cross zero on the same tick at 0.667 per tick): winner=1 again. In overtime, when each team completes a neutral hut on the same tick: winner=1 (overtime). Once endMatch has run, the rest of the loop keeps going: b1 flips to Blue and a 'capture' event is emitted after 'matchEnd'. The final World therefore shows the winner's Throne owned by the loser, and hatch and tower shots also run that tick. This is rare with humans but is a systematic bias in mirrored bot runs.",
+      "suggested_fix": "Resolve captures in two passes: first compute every building that flips this tick, then pick the winner by a tie-break that does not depend on team order (for example, the capture with the larger overshoot below 0 or above 100, then a draw rule), and stop applying flips once the match is over. Alternatively, break out of the capture loop as soon as phase becomes 'over'."
+     },
+     {
+      "severity": "minor",
+      "file": "src/sim/systems/abilities.ts",
+      "summary": "Abilities pressed on the same tick resolve Blue first. A Blue Vortex (stun) or a lethal Blue Stomp cancels Red's cast on that same tick, and Red's rising edge is used up.",
+      "evidence": "abilitiesSystem loops t=0 then t=1 and skips a King that is `!h.alive || h.stunT > 0` (line 22). Vortex sets e.stunT (line 153) and Stomp calls damageHero (line 90) before Red's iteration runs. step.ts lines 60-61 then record prev.ability/ultimate, so Red must release and press again. In scratchpad/castorder.ts, both Blink Kings press Ultimate on the same tick: 'casts: team0', hero1 stunT 1.20, hp 90, Red cd 0/0 (the cast was lost). Both Brawlers at 20 HP press Stomp on the same tick: 'casts: team0', hero1 dead, hero0 unharmed. For humans a same-tick press is rare, but AI bots with identical reaction delays in mirror matches will hit it, which skews the bot balance data that the Throne/Crown ending mix relies on.",
+      "suggested_fix": "Latch both teams' cast eligibility (alive, not stunned, rising edge, off cooldown) before resolving either cast, then resolve both casts, so same-tick casts trade. Or alternate which team resolves first by tick parity. The same pattern is worth checking in any future hero-vs-hero interaction."
+     }
+    ],
+    "overall": "I found no determinism, purity or state-coverage defects in src/sim. The sim holds up under every probe I ran. The only real defects are two minor fairness biases from fixed team order, listed above. All scripts are in /tmp/claude-1000/-home-turbo-creative-game/42a0f085-49e4-4b98-b212-79e3f92ccf72/scratchpad/.\n\n**Evidence**\n- **Two or more worlds in one process** (interleave.ts, soak2.ts): 3 hand-built loadouts, then 16 random ones (random heroes, about 35% of all 22 Mutations each side, aggressive seeded inputs), stepped round-robin. Across 31,420 ticks the hash matched the solo run on every tick.\n- **Snapshot and restore** (clone.ts, soak2.ts): structuredClone and JSON round-trip at ticks 300, 900 and 1500 of 3 loadouts, then continued alongside the original: identical to the end of the match. No -0, NaN or Infinity anywhere in the World at those points.\n- **Hash coverage** (blind.ts): I nudged every numeric or boolean leaf of a mid-match World (about 7,900 per loadout, dead pool slots included) by +0.37 or a flip. No leaf both left the hash unchanged and changed the next 240 ticks. The only unhashed fields are the static `thrones` index, config, and the cosmetic tint and turret aim. spawnCritter resets every field, so stale dead-slot data never reaches play.\n- **Module-level scratch** (grid, the dying queue, volley picks, foeId, px/py, cx/cy, homed, blastHitHero, count/cap/owned): all of it is written before it is read within a step. The dying queue is always empty between steps, since nothing dies in matchSystem or bookkeeping. I found no nested use of `found` or `closest`.\n- **Iteration order**: the only Set/Object.keys uses are the deriveMods dedupe and the hash's sorted mod keys. The volley and insertion sorts keep index order on ties. Each TeamMods field is written by only one Mutation, so mutation list order cannot change mods. The purity grep is clean.\n- **Robustness** (fuzz.ts): 143k ticks across 60 random loadouts with inputs including NaN, \u00b1Infinity, \u00b11e308, 5e-324 and -0. No exceptions, no non-finite values, and nothing left the arena.\n- **Performance** (perf.ts, stress.ts, spike.ts; load average 9-13 on 8 cores, so these are pessimistic):\n\n| Run | ms per step |\n|---|---|\n| Plain match, 10k ticks | 0.107 average |\n| hatch x4 | 0.35 average |\n| Mutation-heavy, hatch x4 | 0.39 average, peak 149 critters |\n| Full 256-critter pool: one King's crowd | 0.47 best batch |\n| Full pool: packed 128 v 128 immortal brawl | 0.55 best batch |\n| Full pool: perf-spec layout | 0.49 best batch |\n\n  Re-timing each tick on clones found no tick that is expensive in itself (p99 about 1.3 ms under load). The rare 17-34 ms maxima were machine contention and GC.\n  - There is no O(n\u00b2) in the hot loops. The heaviest passes are presence (256 \u00d7 13 buildings) and one pool scan per blast or Scorch pulse.\n  - The source makes no per-tick allocations beyond events and zone/turret objects.\n  - V8 still boxes doubles in the critter pass. `--trace-gc` counted 71 minor collections (1-4 ms each) over 20k steps, about one every 5 s at 60 Hz. There were no deoptimisation loops. Not a defect, but a possible source of frame spikes.\n- **Grid slop**: a critter moved more than 0.25 units in one tick in only 0.006-0.02% of critter-ticks, mostly on tick 1 when the start swarm pushes apart. The engineer already flagged this.\n\n**Cross-engine note**\nBesides the two constants the engineer flagged (STUN_DECAY, COAST_K), sin and cos run at runtime on every hatch, split, Kingscall, Militia spawn and garrison-ring pick. Hardcoding those constants alone will not make lockstep exact. math.ts itself needs exact sin/cos/exp/log before online play."
+   }
+  },
+  {
+   "label": "review:rules-vs-gdd",
+   "phase": "Review",
+   "status": "done",
+   "result": {
+    "findings": [
+     {
+      "severity": "critical",
+      "file": "src/sim/systems/buildings.ts",
+      "summary": "Rushing the rival Throne wins every time, well inside the GDD's 1.5 to 2.5 minute battle. A King alone drains a Throne from 100 to 0 in 2.5 s, but a fallen King takes 5 s to respawn, and hatchlings run off to their King instead of defending.",
+      "evidence": "Script: scratchpad/rush.ts. Blue walks straight at the Red Throne from tick 0; Red expands to huts. Blue won by Throne 60/60 (20 seeds each vs brawler, blink and warden Red), at 8.6 to 14.3 s. When both rush, every match ends at 7.6 to 8.8 s. Script: scratchpad/rush2.ts. A Red defender parked on its own Throne, hosing the rusher, still lost 20/20 (11.4 to 40.1 s). Trace (scratchpad/rushtrace.ts, seed 2): Red stands still and drops from 130 to 8 HP in about 2 s, because volleys hit a stationary King while the moving rusher dodges. Red falls at 9.15 s, the Throne flips at 11.82 s and Blue wins while Red is still waiting to respawn. The code: rateFor(kingPresence=4) = 20 x min(1+0.25x4, 3) = 40/s, so 100 control is gone in 2.5 s; tuning.hero.respawnTime = 5; hatch() spawns in state 'home'. The engineers' own harness bot (testing.ts botInputs) ends 30/30 unmutated matches by Throne (scratchpad/dominant.ts 'none' row). The GDD target is Throne 30-45%.",
+      "suggested_fix": "Make the Throne slower to take than the respawn window. Options: a Throne-only drain multiplier (e.g. x0.3, so 8+ s for a King alone); control that regenerates while the owner's King is dead; or Throne hatchlings that garrison while enemies are within the Throne zone. Then rerun rush.ts and expect the rusher to win well under 100%."
+     },
+     {
+      "severity": "major",
+      "file": "src/sim/mutated.ts",
+      "summary": "Several single Mutations win a mirror match almost every time: Splitters, Piercers, Scorch and Militia (the GDD row asks for Mutations that combine, not one that decides the battle).",
+      "evidence": "Script: scratchpad/mutpower.ts. The mutated side vs a plain rival, 16 seeds, sides alternating, review bot; the plain baseline won 6/16. Splitters 16/16, Piercers 16/16, Scorch 15/16, Militia 15/16, Bombers 14/16, Royal Guard 14/16, Long Arm 13/16. Script: scratchpad/dominant.ts, the repo's own testing.ts botInputs, 30 seeds; baseline 15/30. Piercers 27/30, Splitters 26/30, Scorch 25/30. One likely cause for Splitters: a Runt thrown as ammo still lands with the full KIND_LAND_DAMAGE (2 splash, 4 to a King); only its bite is halved (tuning.kinds.runt sets only hp and biteInterval). So each death turns into two more full-strength shots. Rival loadouts vs an unmutated player (scratchpad/rivals.ts, 12 seeds): Mora 12/12 and Mother Brood 11/12. These rivals may be intended to be hard, but both are built on the same outliers.",
+      "suggested_fix": "Tune before the AI and draft work builds on these numbers. For example: give Runts halved landing damage (landDamage 1, landHeroDamage 2 in tuning.kinds.runt); cut Piercer King damage or path damage; lower Scorch damage, or its cap per patch or per team; give Militia fewer free critters or make them count toward the cap. Rerun mutpower.ts until every single Mutation sits around 35-65%."
+     },
+     {
+      "severity": "major",
+      "file": "src/sim/mutated.ts",
+      "summary": "In real play Bloodrage almost never changes anything: Rampage still ends at 8 s. Every critter bite, arrow and splash counts as a 'hit', three of those come within seconds in any brawl, and minTime=8 keeps Rampage from ending sooner.",
+      "evidence": "Script: scratchpad/bloodrage.ts, Blue with Bloodrage vs the same seed without it, 16 seeds. 15/16 full-match traces were bit-identical. Across all matches, plain Rampages lasted 8.02 s every time; Bloodrage Rampages lasted 8.02, 8.45, 8.22, 8.02, 8.03 s and so on. So it lasts 8.0-8.5 s, not 'until you are hit 3 times' (maxTime 25). The single-Mutation sweep gave Bloodrage exactly the unmutated result: 6/16 with the same ending mix {crown:11, throne:5}. The code: damageHero increments rampageHits on every call; bloodrage() ends Rampage once hits>=3 and elapsed>=minTime(8).",
+      "suggested_fix": "Count only meaningful hits (e.g. damage >= 4, or not critter bites), or drop the 8 s floor and raise the hit count, so that Bloodrage really can make Rampage longer. Add a spec where a King is bitten 3 times within 8 s and Rampage still outlasts the plain 8 s."
+     },
+     {
+      "severity": "major",
+      "file": "src/sim/mutations.ts",
+      "summary": "canOffer offers Chain Reaction without Splitters and Cryo Bombs without Bombers. Without them each Duo is a dead draft pick that changes nothing.",
+      "evidence": "Script: scratchpad/duo.ts. canOffer returned true for chainReaction with [scorch, bigLitter] and with [shockwave, boomtown], and for cryoBombs with [shockwave, leeches] and with [scorch, frostbite]. In each case, full 120 s matches with and without the Duo gave identical hero, critter and building state traces in 3/3 seeds. Only the Runt deaths that Splitters creates trigger Chain Reaction (killCritter queues a blast only when kind==='runt'), and only Bomber blasts trigger Cryo Bombs (bomberBlast). The sweep matches: chainReaction and cryoBombs alone both give 6/16, identical to no Mutation. canOffer checks only tags (requires: ['boom','brood'] / ['boom','bite']). This follows the GDD's tag rule literally, but the result is a rewrite that does nothing.",
+      "suggested_fix": "Add a requiresIds field (chainReaction -> splitters, cryoBombs -> bombers) checked in canOffer, or redefine the Duos so they act without the base Mutation. Flag the GDD section 4 wording to the lead."
+     },
+     {
+      "severity": "minor",
+      "file": "src/sim/world.ts",
+      "summary": "The swarm cap counts every owned building (Throne, Tower, Crown), but GDD section 3.3 says 'Swarm cap = base + per Hut held'.",
+      "evidence": "swarmCap counts `b.owner === team` for every kind: floor((capBase 14 + 7 x owned + capAdd) x capMul). A team with only its Throne has cap 21, and capturing the Crown or a Tower raises the cap as a Hut does. The engineer's report cites the brief ('14 + 7 x owned buildings') but did not flag the conflict with the GDD.",
+      "suggested_fix": "Count only huts (and move the base up by 7 if the Throne bonus was deliberate), or update the GDD. The lead should decide which."
+     },
+     {
+      "severity": "minor",
+      "file": "src/sim/systems/fire.ts",
+      "summary": "Short throws fly for as little as 0.12 s, below the GDD's '0.3-0.7 s' arc.",
+      "evidence": "flightDur = distance/15.5 + 0.12, so any throw shorter than 2.79 units lands in under 0.3 s (0.12 s at point blank). With Long Arm, a full-range throw takes 11.55/19.375 + 0.12 = 0.72 s. This is the brief's formula, but nobody flagged it against GDD section 3.2.",
+      "suggested_fix": "Clamp flightDur to at least 0.3 s, or record in the GDD that close throws are faster."
+     },
+     {
+      "severity": "minor",
+      "file": "src/sim/systems/match.ts",
+      "summary": "Overtime has no limit: a battle that reaches a tie with no capture afterwards never ends, which goes against the 'Battles 1.5 to 2.5 minutes' pillar.",
+      "evidence": "Script: scratchpad/idle.ts. Two idle players: phase stays 'overtime' at 1200 s of game time, each side owning only its Throne. matchSystem skips the time-out check once phase === 'overtime', and only a capture or a Crown hold can end it.",
+      "suggested_fix": "Add an overtime cap (e.g. 30 s) that falls back to Crown hold progress or Throne control as a tiebreak, or a sudden-death escalation (Throne drain x2)."
+     }
+    ],
+    "overall": "The sim follows GDD sections 3.1-3.4 and the section 4 table closely, and it plays sensibly when both sides expand. Two problems break it as a game, and three Mutations are close to dead picks.\n\n**Rules checked against the code and specs**\n- **3.1 and 3.2:** these rules are implemented as written:\n  - acceleration and stop times, dash with i-frames and 2.2 s cooldown, regen after 3 s;\n  - a fallen King leaves his swarm holding where it stands, respawns in 5 s, and the rival gets Rampage;\n  - auto-swing, volleys of 3 every 0.13 s with range clamp, landing splash and King hit, garrison or hold for 2.5 s then back to the King, recall, 3 HP with 1-damage bites.\n- **3.3 and 3.4:** also implemented as written: presence capture, contested freeze, drain then flip at 30, Crown opening with Frenzy, 10 s Crown hold with decay, time-out, and overtime where the next capture wins.\n- **Deviations the engineers did not flag:**\n  - the swarm cap counts every building, not just Huts;\n  - short throws fly for under 0.3 s.\n- **Section 4:** all 22 Mutations do what their row says. The exceptions:\n  - Bloodrage makes no difference in practice.\n  - Chain Reaction without Splitters and Cryo Bombs without Bombers do nothing, yet canOffer offers them.\n\n**Scripted play**\nScripts are in `/tmp/claude-1000/-home-turbo-creative-game/42a0f085-49e4-4b98-b212-79e3f92ccf72/scratchpad/`. The bot in `lib.ts` walks to the nearest hut and fires at it, fires at the rival King within 6 units, and goes to the Crown once it opens.\n- **Mirror matches (`base.ts`, 40 seeds):**\n  - every match ended: 26 Crown, 14 Throne, 0 time-out;\n  - Blue 17, Red 23; 2.7 lead changes on average; 103-126 s typical;\n  - Crown endings sit slightly above the GDD's 35-50%.\n- **Stuck critters:** across roughly 450 bot matches, no follow or home critter stood still for 2 s while more than 2.5 units from its King (the longest was 3 ticks).\n- **Followers keeping up (`keepup.ts`):** the farthest follower was 2.2 units behind a King walking straight, and 3.4 behind a Blink King in Rampage (7.67 u/s against 6.2).\n- **Captures:** every capture that started finished; none stalled.\n- **Stun-lock (`stunlock.ts`):** Bombers + Cryo Bombs, with Rapid Fire, Big Litter and Long Arm added in turn, never kept a King stunned for more than 1.93 s in a row, because spent Bombers run out. No permanent lock.\n\n**Critical: rushing the Throne**\nA King walking straight at the rival Throne wins 60/60 against a bot that expands, in 8.6-14.3 s. He also wins 20/20 against a defender parked on its own Throne. The cause is the numbers:\n- a King alone drains a Throne in 2.5 s;\n- a fallen King takes 5 s to respawn;\n- hatchlings leave the Throne to run to their King.\n\nThe repo's own harness bot ends 30/30 unmutated matches by Throne.\n\n**Balance**\n- **Dominant single Mutations (mutated side's wins):**\n\n| Mutation | Review bot (16 seeds) | Repo bot (30 seeds) |\n|---|---|---|\n| Unmutated baseline | 6 | 15 |\n| Splitters | 16 | 26 |\n| Piercers | 16 | 27 |\n| Scorch | 15 | 25 |\n| Militia | 15 | not run |\n\n- **Rival loadouts vs an unmutated player:** Mora won 12/12 and Mother Brood 11/12.\n\n**Not checked in depth:** bit-exact determinism (the hash covers mods, so equal hashes mean more than equal state) and perf. These fall under other lenses."
+   }
+  },
+  {
+   "label": "review:test-quality",
+   "phase": "Review",
+   "status": "done",
+   "result": {
+    "overall": "I checked test quality by mutation testing. /home/turbo/creative-game/src/sim was copied to the scratchpad (/tmp/claude-1000/-home-turbo-creative-game/42a0f085-49e4-4b98-b212-79e3f92ccf72/scratchpad/mt, with node_modules symlinked), 47 single-line mutants were applied to the copy one at a time, and vitest was run each time. After every mutant the copy was restored, and `diff -r` confirmed it was identical again. `git status --short src/` shows nothing under src/sim changed. The other modified paths belong to the ai/ui/render agents.\n\nThe baseline in the copy is 271 tests in 18 files, all green.\n\n**Mutants the suite kills (it goes red):**\n- Crown: no decay, decay while contested, opens a tick late, hold accrues 2x.\n- Match end: overtime capture doesn't win; a tie at time-out picks a winner.\n- Capture: neutral contested fills; flip goes to 100 instead of 30; claimant not reset; King presence 1 instead of 4; any non-Throne capture wins.\n- Hatching: cap off by one; Frenzy ignored.\n- Critters: no hold refresh near an enemy; hold never returns home; recall ignores garrisons; recall on held button; bites not simultaneous.\n- Kings: regen with no delay; no dash i-frames; no respawn grace; respawn at the death spot; no Rampage speed; swing hits own critters; critter bite on a King deals 1.\n- Combat and mutations: tower King damage; Piercer hits the same critter every tick; bite reach x3; stun coasting removed.\n\nSpecs mostly drive the public API (createWorld/step/events). They pin exact tick counts, which suits a deterministic sim. Many specs also set internal fields (stunT = 1e6, hatchT, capMul = 0), or call damageHero/damageCritter directly to build a scenario. That is acceptable scaffolding.\n\n**Weak spots:**\n- **Capture rules:** the contested freeze is only tested at 1 vs 1. Presence has no test for dead Kings or flying critters.\n- **Ammo selection:** nothing checks which critters a volley may throw.\n- **In-air immunity:** its spec is vacuous.\n- **Garrisons:** no spec checks the zone boundary or the defend radius.\n- **Stunned King:** nothing checks that a stunned King cannot move.\n- **Coincidences:** one spec passes only because two formulas agree at presence 1.\n- **Loose assertions:** one hatch spec accepts either state.\n- **Flaky perf gate:** the perf spec fails `npm run check` about half the time on this shared machine.\n- **Balance gate:** no spec or harness asserts the GDD 3.4 ending-mix targets. The CORE report already notes that every bot match ends by Throne capture.\n\nI edited nothing in the repo.",
+    "findings": [
+     {
+      "severity": "major",
+      "file": "src/sim/perf.test.ts",
+      "summary": "The perf spec is flaky on this shared machine: it failed 2 of 4 full-suite runs, so `npm run check` (the studio's done gate) goes red at random.",
+      "evidence": "I ran the full suite 4 times in a row (load average 10-12, the normal condition here with several agents testing at once, per the vite.config comment). Best-of-five batch averages were 1.108 ms (FAIL), 0.724, 0.896 and 1.024 ms (FAIL), against TARGET_MS = 1. An earlier run at load 7.6 gave 0.803. The CORE report measured 0.3 ms alone, so the code is fine and the threshold is too tight for contention. Taking the best of five batches doesn't cure it, because every batch is slowed.",
+      "suggested_fix": "Keep the log line, but either give the assertion a generous machine-independent budget (for example 3 ms), or gate it behind an env flag (PERF=1) and run it by itself. A relative measure also works: the 200-critter step versus an empty-world step."
+     },
+     {
+      "severity": "major",
+      "file": "src/sim/systems/buildings.test.ts",
+      "summary": "'Contested = frozen' (GDD 3.3) is only tested with 1 critter on each side, so a regression where the majority captures or drains while contested passes every spec.",
+      "evidence": "Mutant M32 changes buildings.ts:80 to `if (p0 === p1) return; const t = p0 > p1 ? 0 : 1;`, so the neutral majority fills. Mutant M31 changes buildings.ts:88 to `if (foe > own)`, so the owned majority drains. Both leave all 270 non-perf tests green. 'freezes when contested' and 'regains ... and freezes when contested' both use onHut(w,0) plus onHut(w,1), 1 vs 1.",
+      "suggested_fix": "Add a case with an unequal contest, for example 3 Blue plus a King against 1 Red, on both a neutral and an owned building. Assert control is unchanged."
+     },
+     {
+      "severity": "major",
+      "file": "src/sim/systems/buildings.test.ts",
+      "summary": "Capture presence has no spec saying that dead Kings and flying critters don't count. Deleting either filter leaves the suite green, yet a dead King's body would keep draining a Throne for his 5 s respawn.",
+      "evidence": "Mutant M25 removes `if (!h.alive) continue;` in computePresence (buildings.ts:62). Mutant M23 removes the `c.state === 'fly'` skip at buildings.ts:52. Both give 270/270 green.",
+      "suggested_fix": "Add two specs. (1) A King killed on an enemy hut's ring stops draining it on the next tick. (2) A volley in flight over a neutral hut leaves presence at [0,0] until it lands."
+     },
+     {
+      "severity": "major",
+      "file": "src/sim/systems/fire.test.ts",
+      "summary": "No spec checks which critters a volley may throw. Firing hold, garrison or home critters (emptying garrisons), or firing stunned followers, goes undetected, although GDD 3.2 says 'Out of followers = out of ammo'.",
+      "evidence": "Mutant N3 changes fire.ts:64 `c.state !== 'follow'` to `c.state === 'fly'`, so any grounded critter is ammo. Mutant N4 drops `|| c.stunT > 0`. Both give 270/270 green. Every fire spec uses withFollowers(), where all critters are already followers.",
+      "suggested_fix": "Add a spec with a mix: 2 followers, 1 hold, 1 garrison, 1 home, 1 stunned follower. Hold fire for several volleys and assert only the 2 unstunned followers fly, then noAmmo."
+     },
+     {
+      "severity": "minor",
+      "file": "src/sim/systems/fire.test.ts",
+      "summary": "'cannot be hit while in the air' is vacuous: it stays green with both in-air protections removed.",
+      "evidence": "I removed the fly filter in grid.ts buildGrid (line 39) and the fly guard in combat.ts damageCritter (line 28) together: still 270/270. A probe showed why. The enemy is put at the critter's position after one tick of flight, 0.19 from the Blue King, so it targets the King. The flyer is 0.6 away within 3 ticks and never gets bitten. With the fly skip removed from targeting.ts nearestEnemy (N2), towers waste shots on flying critters, also undetected.",
+      "suggested_fix": "Put the enemy under the flight path's midpoint, far from the King, with a long-flight throw. Also add a tower within range of the arc. Assert the flyer's hp is unchanged and the tower fires no shot while nothing is grounded."
+     },
+     {
+      "severity": "minor",
+      "file": "src/sim/systems/critters.test.ts",
+      "summary": "Garrison behaviour is only lightly specified. Neither the defend radius around the building nor the garrison-zone boundary (landing 'on or next to a building') has a spec.",
+      "evidence": "Mutant M7 makes a garrison look for foes around itself with aggro 0.9, instead of within r+1.75 of the building (critters.ts:335). Mutant M18 doubles the landing garrison-zone radius (fire.ts:172). Both leave the suite green.",
+      "suggested_fix": "Add a garrisoned critter plus an enemy about r+1.5 from the building centre, on the far side from the garrison: assert the garrison engages. Add a landing just outside r+captureMargin: assert 'hold', not 'garrison'."
+     },
+     {
+      "severity": "minor",
+      "file": "src/sim/systems/heroes.test.ts",
+      "summary": "No spec checks that a stunned King cannot move. The Vortex and Cryo Bombs specs assert only that stunT is set.",
+      "evidence": "Mutant M27 changes heroes.ts:283 `const moving = !stunned && ml > 1e-6` to `ml > 1e-6`: 270/270 green.",
+      "suggested_fix": "Set stunT = 1, hold moveX:1 for 30 ticks, and assert the King's x is unchanged (and the dash is refused)."
+     },
+     {
+      "severity": "minor",
+      "file": "src/sim/systems/buildings.test.ts",
+      "summary": "The regain spec can't tell 'regain 25/s' from 'regain at the capture rate', because with 1 critter both equal 25.",
+      "evidence": "Mutant M35 changes buildings.ts:92 `B.regainRate * DT` to `rateFor(own) * DT`: green. rateFor(1) = 20 \u00d7 1.25 = 25 = regainRate. The spec uses onHut(w, 0), a single critter.",
+      "suggested_fix": "Test regain with the King present (presence 4, where the capture rate would be 40) and expect 25/s."
+     },
+     {
+      "severity": "minor",
+      "file": "src/sim/systems/fire.test.ts",
+      "summary": "The King landing-hit radius (0.9) has no boundary test. The spec lands exactly on the King.",
+      "evidence": "Mutant M37 doubles hr at fire.ts:157 (1.8): green. 'hurts the enemy King within 0.9 for 4' places the King at the aim point.",
+      "suggested_fix": "Add a landing 1.0 from the King that doesn't hurt him, next to one 0.8 away that does (biteCd set so only the splash counts)."
+     },
+     {
+      "severity": "minor",
+      "file": "src/sim/systems/buildings.test.ts",
+      "summary": "The hatch spec accepts either 'home' or 'follow' for a new hatchling, so the 'run to you' rule is not pinned.",
+      "evidence": "`expect(['home', 'follow']).toContain(w.critters[e.critter].state)` at buildings.test.ts:143. Mutant N15, which hatches directly as 'follow' (buildings.ts:124), stays green.",
+      "suggested_fix": "Assert the state on the hatch tick is 'home', with the King placed far from the Throne."
+     },
+     {
+      "severity": "minor",
+      "file": "src/sim/mutations.soak.test.ts",
+      "summary": "'exercised the Mutation events' depends on test order: it reads a Set filled by the six soak tests before it, so it fails when run alone or filtered.",
+      "evidence": "`npx vitest run sim/mutations.soak.test.ts -t exercised` gave: FAIL 'expected [] to include explode', 1 failed | 10 skipped.",
+      "suggested_fix": "Fill `seen` inside the test itself, or fold the assertion into a single soak test that loops over all pairs."
+     },
+     {
+      "severity": "minor",
+      "file": "src/sim/determinism.test.ts",
+      "summary": "Nothing checks that hashWorld covers the gameplay fields. Dropping hero hp, critter hp and building control from the hash breaks no spec.",
+      "evidence": "I removed num(x.hp), num(c.hp) and num(b.control) from hash.ts. The only failure in the full run was the perf spec (the grep showed 1 failed | 270 passed with no other FAIL). 'hash is sensitive to gameplay state' only checks critters[3].x and heroes[1].cd[0]. Everything else only compares two identical runs.",
+      "suggested_fix": "Add a table-driven spec that nudges each hashed field (hero, critter, building, zone, turret, crown, rng, born, mods) and expects a different hash."
+     },
+     {
+      "severity": "minor",
+      "file": "src/sim/mutations.king.test.ts",
+      "summary": "The Trample spec pins 'recharges 40% faster' as a 1.32 s cooldown (rate x1.67). Rapid Fire's '60% faster' is read as a x1.6 rate, so the two texts use different scales.",
+      "evidence": "mutations.ts:99 `m.dashCdRate /= X.trample.dashCdMul` with dashCdMul 0.6 gives rate 1.667 and cooldown 1.32 s. mutations.ts:109 divides fireIntervalMul by 1.6, giving rate 1.6. The spec 'the dash recharges 40% faster' waits ceil(2.2*0.6/DT) ticks. A x1.4 rate would be a 1.571 s cooldown. The player-facing text comes verbatim from the GDD.",
+      "suggested_fix": "Choose one reading: set dashCdMul to 1/1.4 (cooldown \u2248 1.571 s), or reword the text to '40% shorter cooldown'. Then update the spec to match."
+     }
+    ]
+   }
+  },
+  {
+   "label": "sim:fix",
+   "phase": "Fix",
+   "status": "interrupted",
+   "digest": "design/handoff/inflight/sim-fix.md"
+  }
+ ]
+}

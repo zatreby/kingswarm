@@ -10,17 +10,21 @@ import { UNIT_STENCIL, KING_STENCIL, makeRing, type Ring } from './rings';
 import { sceneX, sceneZ, angleDelta, approach, THROW_RANGE } from './mapping';
 
 export const KING = {
-  radius: 0.56,
-  outline: 0.05,
-  eyeR: 0.16, pupilR: 0.085, eyeAz: 0.36, eyeEl: 0.62,
+  /** About twice a critter on screen (art review: ~70 px at 1080p). */
+  radius: 0.66,
+  outline: 0.08,
+  eyeR: 0.18, pupilR: 0.095, eyeAz: 0.36, eyeEl: 0.62,
   hopsPerUnit: 0.55, hopHeight: 0.16,
   turnRate: 14,
   leanMax: 0.22,
   capeFlareMax: 1.0,
   /** Mirrors tuning.hero.respawnTime (seconds dead). */
   respawnTime: 5,
-  ringR0: 0.74, ringR1: 0.86,
-  hpBarW: 1.1, hpBarH: 0.13,
+  ringR0: 0.86, ringR1: 1.02,
+  hpBarW: 1.2, hpBarH: 0.15,
+  /** Throw range ring: an arc facing the aim, clipped to land, strong only while firing. */
+  aimArc: 1.1,
+  flashTime: 0.07,
 } as const;
 
 export type LookId = 'brawler' | 'blink' | 'warden' | 'bumble' | 'pip' | 'brood' | 'gorm' | 'sable' | 'mora';
@@ -56,6 +60,8 @@ interface KingView {
   hp: THREE.Group; hpBar: THREE.Group; hpFill: THREE.Mesh; hpFillMat: THREE.MeshBasicMaterial;
   ghost: THREE.Group; ghostRing: Ring;
   yaw: number; hop: number; lastX: number; lastY: number; spd: number; capeYaw: number; capeFlare: number;
+  /** Cosmetic reaction timers (seconds of presentation time). */
+  flashT: number; flashK: number; hitT: number; hitK: number; recoil: number; shieldT: number;
   disposables: { dispose(): void }[];
 }
 
@@ -65,7 +71,11 @@ export class Kings {
   private localTeam: Team = 0;
   private aimTeam: Team | null = null;
   private colorBlind = false;
-  private readonly aim: { range: THREE.Mesh; rangeMat: THREE.ShaderMaterial; reticle: THREE.Group; reticleMat: THREE.MeshBasicMaterial };
+  private readonly aim: { range: THREE.Mesh; rangeMat: THREE.ShaderMaterial; reticle: THREE.Group; reticleMat: THREE.MeshBasicMaterial; fire: number };
+  private time = 0;
+  /** Crown geometry and materials, shared with the effect that knocks a crown off a fallen King. */
+  readonly crownGeo = crownGeometry(0.3, 0.3, 5, 1);
+  readonly crownMats: THREE.Material[] = [toonNew(PAL.gold, { emissive: new THREE.Color(PAL.goldDeep), emissiveIntensity: 0.35 }), outlineMaterial(PAL.goldDeep, 0.03)];
   /** Last pointer ground point (sim units), for the reticle's distance; NaN when unknown (gamepad). */
   readonly pointer = { x: NaN, y: NaN };
   private readonly camQuat = new THREE.Quaternion();
@@ -75,26 +85,43 @@ export class Kings {
 
   constructor() {
     const rangeMat = new THREE.ShaderMaterial({
-      uniforms: { uColor: { value: new THREE.Color(PAL.white) }, uTime: { value: 0 } },
+      uniforms: {
+        uColor: { value: new THREE.Color(PAL.white) }, uTime: { value: 0 }, uAim: { value: new THREE.Vector2(1, 0) },
+        uFire: { value: 0 }, uArc: { value: KING.aimArc }, uClip: { value: new THREE.Vector4(-16.2, -9.2, 16.2, 9.2) },
+      },
       transparent: true, depthWrite: false,
-      vertexShader: 'varying vec2 vP; void main(){ vP = position.xz; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-      fragmentShader: `uniform vec3 uColor; uniform float uTime; varying vec2 vP;
-        void main(){ float a = atan(vP.y, vP.x); float d = step(0.5, fract(a * 64.0 / 6.2831853 + uTime * 0.4));
-        gl_FragColor = vec4(uColor, 0.3 * d);
-        #include <colorspace_fragment>
+      vertexShader: 'varying vec2 vP; varying vec2 vW; void main(){ vP = position.xz; vW = (modelMatrix * vec4(position,1.0)).xz; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+      fragmentShader: `uniform vec3 uColor; uniform float uTime; uniform vec2 uAim; uniform float uFire; uniform float uArc; uniform vec4 uClip;
+        varying vec2 vP; varying vec2 vW;
+        void main(){
+          if (vW.x < uClip.x || vW.y < uClip.y || vW.x > uClip.z || vW.y > uClip.w) discard;
+          float a = atan(vP.y, vP.x);
+          float off = abs(atan(uAim.x * vP.y - uAim.y * vP.x, dot(uAim, vP)));
+          float arc = 1.0 - smoothstep(uArc * 0.6, uArc, off);
+          float d = step(0.45, fract(a * 64.0 / 6.2831853 + uTime * 0.4));
+          float al = d * arc * mix(0.14, 0.55, uFire);
+          if (al < 0.01) discard;
+          gl_FragColor = vec4(uColor, al);
+          #include <colorspace_fragment>
         }`,
     });
-    const rg = new THREE.RingGeometry(0.985, 1.0, 128, 1); rg.rotateX(-Math.PI / 2);
+    const rg = new THREE.RingGeometry(0.975, 1.0, 160, 1); rg.rotateX(-Math.PI / 2);
     const range = new THREE.Mesh(rg, rangeMat);
     range.renderOrder = 3; range.visible = false;
-    const reticleMat = new THREE.MeshBasicMaterial({ color: PAL.white, transparent: true, opacity: 0.9, depthWrite: false, depthTest: false });
+    const reticleMat = new THREE.MeshBasicMaterial({ color: PAL.white, transparent: true, opacity: 0.95, depthWrite: false, depthTest: false });
+    const inkMat = new THREE.MeshBasicMaterial({ color: PAL.ink, transparent: true, opacity: 0.75, depthWrite: false, depthTest: false });
     const reticle = new THREE.Group();
-    const rparts: THREE.BufferGeometry[] = [new THREE.RingGeometry(0.34, 0.42, 32).rotateX(-Math.PI / 2)];
-    for (let i = 0; i < 4; i++) rparts.push(new THREE.BoxGeometry(0.2, 0.01, 0.07).translate(0.52, 0, 0).rotateY((i * Math.PI) / 2));
-    reticle.add(new THREE.Mesh(mergeGeometries(rparts.map((g) => posNormal(g)), false)!, reticleMat));
-    reticle.position.y = 0.05; reticle.renderOrder = 55; reticle.children.forEach((c) => (c.renderOrder = 55)); reticle.visible = false;
+    const parts = (w: number) => {
+      const rp: THREE.BufferGeometry[] = [new THREE.RingGeometry(0.36 - w, 0.44 + w, 32).rotateX(-Math.PI / 2)];
+      for (let i = 0; i < 4; i++) rp.push(new THREE.BoxGeometry(0.22 + w * 2, 0.01, 0.08 + w * 2).translate(0.56, 0, 0).rotateY((i * Math.PI) / 2));
+      return mergeGeometries(rp.map((g) => posNormal(g)), false)!;
+    };
+    const ink = new THREE.Mesh(parts(0.045), inkMat); ink.renderOrder = 54;
+    const fill = new THREE.Mesh(parts(0), reticleMat); fill.renderOrder = 55; fill.position.y = 0.002;
+    reticle.add(ink, fill);
+    reticle.position.y = 0.05; reticle.visible = false;
     this.group.add(range, reticle);
-    this.aim = { range, rangeMat, reticle, reticleMat };
+    this.aim = { range, rangeMat, reticle, reticleMat, fire: 0 };
   }
 
   build(world: World, looks: [string, string], localTeam: Team, colorBlind: boolean): void {
@@ -126,10 +153,28 @@ export class Kings {
   }
 
   update(world: World, alpha: number, dt: number, time: number, camera: THREE.Camera): void {
+    this.time = time;
     camera.getWorldQuaternion(this.camQuat);
     for (const v of this.views) this.updateKing(v, v.fixture ?? world.heroes[v.team], world, alpha, dt, time);
-    this.updateAim(world, alpha, time);
+    this.updateAim(world, alpha, dt, time);
   }
+
+  // ------------------------------------------------------------ event reactions (cosmetic)
+
+  /** White hit flash; repeated hits inside the window extend it and grow the wobble (aggregated, no numbers). */
+  flash(team: Team, strength: number): void {
+    const v = this.views[team]; if (!v) return;
+    v.flashT = this.time + KING.flashTime; v.flashK = Math.max(strength, this.time < v.flashT ? v.flashK : 0);
+    v.hitK = Math.min(1, (this.time - v.hitT < 0.25 ? v.hitK : 0) + 0.35); v.hitT = this.time;
+  }
+  /** Throw recoil: a small lean back from the aim. */
+  recoil(team: Team): void { const v = this.views[team]; if (v) v.recoil = Math.min(1, v.recoil + 0.45); }
+  /** Shield absorbed a hit: the bubble pulses. */
+  shieldHit(team: Team): void { const v = this.views[team]; if (v) v.shieldT = this.time; }
+  /** A small squash (no-ammo click, cast). */
+  bump(team: Team, k = 0.5): void { const v = this.views[team]; if (v) { v.hitK = Math.max(v.hitK, k); v.hitT = this.time; } }
+  /** Scene-space top of the head of King t. */
+  headY(t: Team): number { return this.views[t]?.top ?? 1.3; }
 
   private updateKing(v: KingView, h: Hero, world: World, alpha: number, dt: number, time: number): void {
     const x = h.px + (h.x - h.px) * alpha, y = h.py + (h.y - h.py) * alpha;
@@ -138,7 +183,8 @@ export class Kings {
     if (!h.alive) {
       const th = world.buildings[world.thrones[v.team]];
       if (th) v.ghost.position.set(sceneX(th.x), 0, sceneZ(th.y));
-      v.ghost.children[0].position.y = this.buildingTop(world.thrones[v.team]) + 0.5 + Math.sin(time * 2.4) * 0.12;
+      v.ghost.children[0].position.y = this.buildingTop(world.thrones[v.team]) + 0.35 + Math.sin(time * 2.4) * 0.14;
+      v.ghost.children[0].rotation.y = Math.sin(time * 0.9) * 0.4;
       v.ghostRing.u.uFill.value = 1 - Math.max(0, Math.min(1, h.respawnT / KING.respawnTime));
       v.ghostRing.u.uTime.value = time;
       v.hp.visible = false;
@@ -171,11 +217,15 @@ export class Kings {
       const rel = velYaw - v.yaw, lean = Math.min(KING.leanMax, v.spd * 0.035);
       leanX = Math.cos(rel) * lean; leanZ = -Math.sin(rel) * lean;
     }
+    // Hit wobble (aggregated hits ring it harder).
+    const ht = time - v.hitT;
+    if (ht >= 0 && ht < 0.4) sy *= 1 - 0.14 * v.hitK * Math.exp(-ht * 10) * Math.cos(ht * 34);
     let sxz = 1 / Math.sqrt(sy), sz = sxz;
     if (dashing) { sy = 0.8; sxz = 0.95; sz = 1.45; lift = 0.1; }
     if (stunned) { sy = 0.72; sxz = sz = 1.16; lift = 0; }
+    v.recoil *= Math.exp(-dt * 14);
     v.lean.position.y = lift;
-    v.lean.rotation.set(leanX, 0, leanZ);
+    v.lean.rotation.set(leanX - v.recoil * 0.22, 0, leanZ);
     v.lean.scale.set(sxz, sy, sz);
 
     // Cape trails the velocity, flaring with speed; hangs at rest.
@@ -186,35 +236,38 @@ export class Kings {
     v.cape.rotation.set(v.capeFlare, v.capeYaw, 0, 'YXZ');
 
     // Rampage tint, shield, stars.
-    v.bodyMat.emissive.setRGB(h.rampageT > 0 ? 0.35 + 0.15 * Math.sin(time * 12) : 0, h.rampageT > 0 ? 0.08 : 0, 0);
+    const fl = time < v.flashT ? v.flashK : 0;
+    const rg = h.rampageT > 0 ? 0.35 + 0.15 * Math.sin(time * 12) : 0;
+    v.bodyMat.emissive.setRGB(rg + fl, (h.rampageT > 0 ? 0.08 : 0) + fl, fl);
     v.aura.visible = h.rampageT > 0;
     if (v.aura.visible) { const s = 1 + Math.sin(time * 10) * 0.06; v.aura.scale.set(s, 1 + Math.sin(time * 7) * 0.1, s); v.aura.rotation.y = time * 2; }
     v.shield.visible = h.shieldT > 0 && h.shield > 0;
-    if (v.shield.visible) { const s = 1 + Math.sin(time * 5) * 0.03; v.shield.scale.setScalar(s); }
+    if (v.shield.visible) { const st = time - v.shieldT; const s = 1 + Math.sin(time * 5) * 0.03 + (st < 0.3 ? 0.12 * (1 - st / 0.3) : 0); v.shield.scale.setScalar(s); }
     v.stars.visible = stunned;
     if (stunned) { v.stars.rotation.y = time * 5; v.stars.position.y = v.top + 0.25 + lift; }
     // Respawn grace / dash i-frames: gentle blink so it reads without flashing hard.
     v.lean.visible = !(h.invulnT > 0 && !dashing && Math.sin(time * 28) > 0.6);
 
     // Ground ring and local marker.
-    v.ringMat.opacity = v.marker ? 0.9 + Math.sin(time * 4) * 0.1 : 0.75;
-    if (v.marker) v.marker.position.y = Math.sin(time * 4) * 0.08;
+    v.ringMat.opacity = 0.92;
+    if (v.marker) v.marker.position.y = (v.fixture ? 0 : 0.2) + Math.abs(Math.sin(time * 3.2)) * 0.16;
 
     // Tag: chevron (local) always, HP bar only when hurt.
     const frac = h.maxHp > 0 ? h.hp / h.maxHp : 1;
     const hurt = frac < 0.999;
     v.hp.visible = hurt || !!v.marker;
     v.hpBar.visible = hurt;
-    v.hp.position.set(sceneX(x), v.top + 0.75 + lift, sceneZ(y));
+    v.hp.position.set(sceneX(x), v.top + 0.62 + lift, sceneZ(y));
     v.hp.quaternion.copy(this.camQuat);
-    v.hpBar.position.y = v.marker ? 0.55 : 0;
+    v.hpBar.position.y = v.marker ? 0 : 0;
+    if (v.marker) v.marker.position.y += hurt ? 0.3 : 0;
     if (hurt) {
       v.hpFill.scale.x = Math.max(0.001, frac);
       v.hpFillMat.color.copy(frac < 0.3 ? this.pal.danger : this.pal.body[v.team]);
     }
   }
 
-  private updateAim(world: World, alpha: number, time: number): void {
+  private updateAim(world: World, alpha: number, dt: number, time: number): void {
     const { range, reticle, rangeMat } = this.aim;
     const t = this.aimTeam;
     const h = t === null ? null : world.heroes[t];
@@ -225,7 +278,10 @@ export class Kings {
     const r = THROW_RANGE * (world.mods?.[t]?.throwRangeMul ?? 1);
     range.position.set(sceneX(x), 0.04, sceneZ(y));
     range.scale.set(r, 1, r);
+    this.aim.fire += ((h.prev?.fire ? 1 : 0) - this.aim.fire) * approach(10, dt);
     rangeMat.uniforms.uTime.value = time;
+    rangeMat.uniforms.uFire.value = this.aim.fire;
+    rangeMat.uniforms.uAim.value.set(h.aimX, h.aimY);
     rangeMat.uniforms.uColor.value.copy(this.pal.light[t]);
     // Direction is the sim's aim; distance comes from the pointer when we have one.
     let d = r * 0.6;
@@ -251,15 +307,15 @@ export class Kings {
     const disposables: { dispose(): void }[] = [];
     const D = <T extends { dispose(): void }>(d: T) => (disposables.push(d), d);
     const stencil = { stencilWrite: true, stencilRef: KING_STENCIL, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp } as const;
-    // A touch lighter than the critters so the King separates from his own crowd by value, not just size.
-    const bodyMat = D(toonNew(new THREE.Color(tc.body).lerp(new THREE.Color(tc.light), 0.2), { ...stencil }));
+    // Full team saturation (pale reads as another faction); size, crown, cape and the thick outline separate him from his crowd.
+    const bodyMat = D(toonNew(tc.body, { ...stencil }));
     const lightMat = D(toonNew(tc.light));
-    const capeCol = new THREE.Color(tc.body).lerp(new THREE.Color(tc.dark), 0.45);
+    const capeCol = new THREE.Color(tc.body).lerp(new THREE.Color(tc.dark), 0.55);
     const capeMat = D(toonNew(capeCol, { side: THREE.DoubleSide }));
     const outMat = D(outlineMaterial(tc.dark, KING.outline));
     Object.assign(outMat, stencil);
     const goldMat = D(toonNew(PAL.gold, { emissive: new THREE.Color(PAL.goldDeep), emissiveIntensity: 0.35 }));
-    const goldOut = D(outlineMaterial(PAL.goldDeep, 0.025));
+    const goldOut = D(outlineMaterial(PAL.goldDeep, 0.03));
     const white = D(new THREE.MeshBasicMaterial({ color: PAL.white }));
     const ink = D(new THREE.MeshBasicMaterial({ color: PAL.ink }));
     const matCache = new Map<string, THREE.MeshToonMaterial>();
@@ -319,7 +375,7 @@ export class Kings {
     }
 
     // Crown.
-    const crownG = look === 'mora' ? crownGeometry(0.26, 0.34, 7, 1.9) : crownGeometry(0.24, 0.26, 5, 1);
+    const crownG = look === 'mora' ? crownGeometry(0.31, 0.38, 7, 1.9) : crownGeometry(0.3, 0.3, 5, 1);
     const crown = add(crownG, goldMat, true);
     crown.position.y = top - 0.07;
     if (spec.crown === 'askew') { crown.scale.setScalar(0.62); crown.rotation.z = 0.42; crown.position.set(0.12, top - 0.05, 0); }
@@ -329,8 +385,8 @@ export class Kings {
     // Cape: a curved sheet hanging from the shoulders, pivoting at the top.
     const cape = new THREE.Group();
     cape.position.set(0, top * 0.72, 0);
-    const capeH = top * 0.72 * spec.capeLen + (look === 'mora' ? 0.15 : 0);
-    const capeG = new THREE.CylinderGeometry(R * W * 0.62, R * W * 1.06, capeH, 12, 1, true, Math.PI - 1.0, 2.0);
+    const capeH = top * 0.8 * spec.capeLen + (look === 'mora' ? 0.15 : 0);
+    const capeG = new THREE.CylinderGeometry(R * W * 0.7, R * W * 1.18, capeH, 14, 1, true, Math.PI - 1.2, 2.4);
     capeG.translate(0, -capeH / 2, 0);
     const capeMesh = new THREE.Mesh(D(capeG), capeMat);
     cape.add(capeMesh);
@@ -442,37 +498,35 @@ export class Kings {
       }
     }
 
-    // Ground ring (and the local player's extra marker). The local ring also draws through critters
-    // (stencil = UNIT_STENCIL) so he is found instantly inside his own crowd.
-    const r1 = local ? KING.ringR1 + 0.06 : KING.ringR1;
-    const ringG = new THREE.RingGeometry(KING.ringR0, r1, 40); ringG.rotateX(-Math.PI / 2);
-    const ringMat = D(new THREE.MeshBasicMaterial({ color: local ? tc.light : tc.body, transparent: true, opacity: 0.85, depthWrite: false }));
+    // Bold team ground ring with an ink rim, under both Kings. It also draws through critters
+    // (stencil = UNIT_STENCIL) so each King is found instantly inside a crowd.
+    const r1 = local ? KING.ringR1 + 0.05 : KING.ringR1;
+    const ringG = new THREE.RingGeometry(KING.ringR0, r1, 48); ringG.rotateX(-Math.PI / 2);
+    const ringMat = D(new THREE.MeshBasicMaterial({ color: local ? tc.light : tc.body, transparent: true, opacity: 0.92, depthWrite: false }));
     const ring = new THREE.Mesh(D(ringG), ringMat);
-    ring.position.y = 0.04; ring.renderOrder = 3;
+    ring.position.y = 0.045; ring.renderOrder = 3;
     root.add(ring);
-    const rimG = new THREE.RingGeometry(r1, r1 + 0.06, 40); rimG.rotateX(-Math.PI / 2);
-    const rim = new THREE.Mesh(D(rimG), D(new THREE.MeshBasicMaterial({ color: tc.dark, transparent: true, opacity: 0.8, depthWrite: false })));
-    rim.position.y = 0.04; rim.renderOrder = 3;
-    root.add(rim);
-    if (local) {
-      const ghostMat = D(new THREE.MeshBasicMaterial({
-        color: tc.light, transparent: true, opacity: 0.7, depthWrite: false, depthTest: false,
-        stencilWrite: true, stencilRef: UNIT_STENCIL, stencilFunc: THREE.EqualStencilFunc, stencilWriteMask: 0,
-        stencilFail: THREE.KeepStencilOp, stencilZFail: THREE.KeepStencilOp, stencilZPass: THREE.KeepStencilOp,
-      }));
-      const ghostRing = new THREE.Mesh(ringG, ghostMat);
-      ghostRing.position.y = 0.04; ghostRing.renderOrder = 52;
-      root.add(ghostRing);
-    }
+    const rimG = new THREE.RingGeometry(KING.ringR0 - 0.06, KING.ringR0, 48); rimG.rotateX(-Math.PI / 2);
+    const rimG2 = new THREE.RingGeometry(r1, r1 + 0.07, 48); rimG2.rotateX(-Math.PI / 2);
+    const rimMat = D(new THREE.MeshBasicMaterial({ color: PAL.ink, transparent: true, opacity: 0.8, depthWrite: false }));
+    for (const g of [rimG, rimG2]) { const m = new THREE.Mesh(D(g), rimMat); m.position.y = 0.045; m.renderOrder = 3; root.add(m); }
+    const ghostMat = D(new THREE.MeshBasicMaterial({
+      color: local ? tc.light : tc.body, transparent: true, opacity: local ? 0.75 : 0.55, depthWrite: false, depthTest: false,
+      stencilWrite: true, stencilRef: UNIT_STENCIL, stencilFunc: THREE.EqualStencilFunc, stencilWriteMask: 0,
+      stencilFail: THREE.KeepStencilOp, stencilZFail: THREE.KeepStencilOp, stencilZPass: THREE.KeepStencilOp,
+    }));
+    const ghostRing = new THREE.Mesh(ringG, ghostMat);
+    ghostRing.position.y = 0.045; ghostRing.renderOrder = 52;
+    root.add(ghostRing);
     const shadowG = new THREE.CircleGeometry(KING.ringR0 * 0.95, 24); shadowG.rotateX(-Math.PI / 2);
-    const shadow = new THREE.Mesh(D(shadowG), D(new THREE.MeshBasicMaterial({ color: PAL.ink, transparent: true, opacity: 0.3, depthWrite: false })));
+    const shadow = new THREE.Mesh(D(shadowG), D(new THREE.MeshBasicMaterial({ color: PAL.ink, transparent: true, opacity: 0.32, depthWrite: false })));
     shadow.position.y = 0.03; shadow.renderOrder = 2;
     root.add(shadow);
     // State overlays.
     const stars = new THREE.Group();
-    const starG = D(faceted(new THREE.OctahedronGeometry(0.15, 0)));
+    const starG = D(faceted(new THREE.OctahedronGeometry(0.17, 0)));
     const starM = D(new THREE.MeshBasicMaterial({ color: '#FFF3A0' }));
-    for (let i = 0; i < 4; i++) { const s = new THREE.Mesh(starG, starM); const a = (i / 4) * Math.PI * 2; s.position.set(Math.cos(a) * 0.55, 0, Math.sin(a) * 0.55); s.scale.y = 1.4; stars.add(s); }
+    for (let i = 0; i < 4; i++) { const s = new THREE.Mesh(starG, starM); const a = (i / 4) * Math.PI * 2; s.position.set(Math.cos(a) * 0.62, 0, Math.sin(a) * 0.62); s.scale.y = 1.4; stars.add(s); }
     stars.visible = false; root.add(stars);
     const shield = new THREE.Mesh(D(new THREE.SphereGeometry(R * Math.max(W, 1) * 1.55, 24, 16)), D(fresnelMaterial(tc.light)));
     shield.position.y = top * 0.5; shield.visible = false; shield.renderOrder = 40; root.add(shield);
@@ -480,11 +534,11 @@ export class Kings {
     const aura = new THREE.Mesh(D(auraG), D(auraMaterial(PAL.danger)));
     aura.visible = false; aura.renderOrder = 41; root.add(aura);
 
-    // Billboard tag above the head: the local King's chevron and, when hurt, the HP bar.
+    // Billboard tag above the head: the local King's bobbing chevron, the rival's crown badge, and the HP bar when hurt.
     const hp = new THREE.Group();
     const bar = new THREE.Group();
-    const bgG = new THREE.PlaneGeometry(KING.hpBarW + 0.08, KING.hpBarH + 0.08);
-    const bg = new THREE.Mesh(D(bgG), D(new THREE.MeshBasicMaterial({ color: PAL.ink, depthTest: false, transparent: true, opacity: 0.85 })));
+    const bgG = new THREE.PlaneGeometry(KING.hpBarW + 0.1, KING.hpBarH + 0.1);
+    const bg = new THREE.Mesh(D(bgG), D(new THREE.MeshBasicMaterial({ color: PAL.ink, depthTest: false, transparent: true, opacity: 0.88 })));
     const fillG = new THREE.PlaneGeometry(KING.hpBarW, KING.hpBarH); fillG.translate(KING.hpBarW / 2, 0, 0);
     const hpFillMat = D(new THREE.MeshBasicMaterial({ color: tc.body, depthTest: false, transparent: true }));
     const hpFill = new THREE.Mesh(D(fillG), hpFillMat);
@@ -494,29 +548,31 @@ export class Kings {
     bar.visible = false;
     hp.add(bar);
     let marker: THREE.Group | null = null;
-    if (local) {
+    if (local || team !== this.localTeam) {
       marker = new THREE.Group();
-      const chevron = (s: number) => new THREE.ShapeGeometry(new THREE.Shape([[-0.34, 0.24], [0, 0.08], [0.34, 0.24], [0, -0.24]].map(([x, y]) => new THREE.Vector2(x * s, y * s - (s - 1) * 0.02))));
-      const out = new THREE.Mesh(D(chevron(1.32)), D(new THREE.MeshBasicMaterial({ color: tc.dark, depthTest: false, transparent: true })));
-      const fill = new THREE.Mesh(D(chevron(1)), D(new THREE.MeshBasicMaterial({ color: tc.light, depthTest: false, transparent: true })));
-      out.renderOrder = 70; fill.renderOrder = 71; fill.position.z = 0.001;
-      marker.add(out, fill);
+      const tex = D(local ? chevronTexture() : badgeTexture(tc.body));
+      const size = local ? 0.95 : 0.78;
+      const m = new THREE.Mesh(D(new THREE.PlaneGeometry(size, size)), D(new THREE.MeshBasicMaterial({ map: tex, depthTest: false, transparent: true })));
+      m.renderOrder = 70; m.position.y = 0.42;
+      marker.add(m);
       hp.add(marker);
     }
 
-    // Ghost at the Throne while dead: a pale crowned blob with a respawn ring.
+    // Ghost at the Throne while dead: a translucent crowned King with a respawn countdown ring.
     const ghost = new THREE.Group();
     const gBody = new THREE.Group();
-    const gb = new THREE.Mesh(D(blobGeometry(0.4, 14, 10, 0.95)), D(new THREE.MeshBasicMaterial({ color: tc.light, transparent: true, opacity: 0.55, depthWrite: false })));
-    const gc = new THREE.Mesh(crownG, D(new THREE.MeshBasicMaterial({ color: PAL.gold, transparent: true, opacity: 0.8 })));
-    gc.position.y = 0.72; gc.scale.setScalar(0.8);
-    gBody.add(gb, gc);
+    const gbG = blobGeometry(R * 0.9, 16, 12, 0.95); gbG.scale(W, Hh, W);
+    const gb = new THREE.Mesh(D(gbG), D(new THREE.MeshBasicMaterial({ color: tc.light, transparent: true, opacity: 0.6, depthWrite: false })));
+    const gbo = new THREE.Mesh(gbG, D(Object.assign(outlineMaterial(tc.dark, 0.05), { transparent: true, opacity: 0.5, depthWrite: false })));
+    const gc = new THREE.Mesh(crownG, D(new THREE.MeshBasicMaterial({ color: PAL.gold, transparent: true, opacity: 0.85 })));
+    gc.position.y = R * 0.9 * 2 * 0.95 * Hh - 0.06;
+    gBody.add(gbo, gb, gc);
     ghost.add(gBody);
-    const ghostRing = makeRing(1.75, 1.95);
-    ghostRing.u.uColor.value.set(tc.light);
-    ghostRing.group.position.y = 0.02;
-    ghost.add(ghostRing.group);
-    disposables.push(ghostRing);
+    const ghostRing2 = makeRing(1.75, 1.97);
+    ghostRing2.u.uColor.value.set(tc.light);
+    ghostRing2.group.position.y = 0.02;
+    ghost.add(ghostRing2.group);
+    disposables.push(ghostRing2);
     ghost.visible = false;
 
     // Bake all rigid parts into one mesh per material: a King is ~12 draw calls instead of ~35.
@@ -528,8 +584,9 @@ export class Kings {
       Object.assign(m.material as THREE.Material, stencil);
     });
     return {
-      team, fixture: null, root, lean, cape, bodyMat, top, ring, ringMat, marker, stars, shield, aura, hp, hpBar: bar, hpFill, hpFillMat, ghost, ghostRing,
+      team, fixture: null, root, lean, cape, bodyMat, top, ring, ringMat, marker, stars, shield, aura, hp, hpBar: bar, hpFill, hpFillMat, ghost, ghostRing: ghostRing2,
       yaw: 0, hop: 0, lastX: 0, lastY: 0, spd: 0, capeYaw: 0, capeFlare: 0.12, disposables,
+      flashT: -1, flashK: 0, hitT: -9, hitK: 0, recoil: 0, shieldT: -9,
     };
   }
 
@@ -596,3 +653,29 @@ function auraMaterial(color: string): THREE.ShaderMaterial {
   });
 }
 
+
+/** Local player marker: a white chevron with a thick ink outline. */
+function chevronTexture(): THREE.CanvasTexture {
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const g = c.getContext('2d')!;
+  const path = () => { g.beginPath(); g.moveTo(18, 30); g.lineTo(64, 56); g.lineTo(110, 30); g.lineTo(64, 112); g.closePath(); };
+  g.lineJoin = 'round';
+  path(); g.lineWidth = 22; g.strokeStyle = PAL.ink; g.stroke();
+  path(); g.fillStyle = PAL.white; g.fill();
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/** Rival marker: a small team-colour badge ringed in ink with a gold crown inside. */
+function badgeTexture(team: string): THREE.CanvasTexture {
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const g = c.getContext('2d')!;
+  g.beginPath(); g.arc(64, 60, 50, 0, Math.PI * 2); g.fillStyle = PAL.ink; g.fill();
+  g.beginPath(); g.arc(64, 60, 41, 0, Math.PI * 2); g.fillStyle = team; g.fill();
+  g.beginPath(); g.moveTo(64, 116); g.lineTo(50, 100); g.lineTo(78, 100); g.closePath(); g.fillStyle = PAL.ink; g.fill();
+  g.beginPath();
+  g.moveTo(38, 78); g.lineTo(34, 42); g.lineTo(50, 56); g.lineTo(64, 34); g.lineTo(78, 56); g.lineTo(94, 42); g.lineTo(90, 78); g.closePath();
+  g.lineJoin = 'round'; g.lineWidth = 7; g.strokeStyle = PAL.goldDeep; g.stroke(); g.fillStyle = PAL.gold; g.fill();
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}

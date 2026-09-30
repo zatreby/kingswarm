@@ -1,8 +1,9 @@
+import { HEROES } from '../catalog';
 import { btn, h, shell } from '../dom';
 import { formatElapsed } from '../format';
-import { picto } from '../icons';
+import { heroIcon, picto } from '../icons';
 import type { RunOverModel, RunWonModel } from '../types';
-import { buildRow, ladder, unlockCards, type Ctx, type ScreenInst } from './common';
+import { buildIcons, buildRow, ladder, unlockCards, type Ctx, type ScreenInst } from './common';
 
 export function runOverScreen(m: RunOverModel, _ctx: Ctx): ScreenInst {
   const el = shell('runOver', 'The run ends');
@@ -10,7 +11,7 @@ export function runOverScreen(m: RunOverModel, _ctx: Ctx): ScreenInst {
   if (m.assistOffer) {
     const offer = m.assistOffer;
     const on = btn('Turn on Assist', () => { offer.onAccept(); assist?.replaceChildren(h('span', null, 'Assist is on. Change it any time in Settings.')); }, { kind: 'plain', size: 'sm' });
-    assist = h('p', { class: 'assist-offer' }, h('span', null, 'Tough ladder? Assist hatches faster after each lost run.'), on);
+    assist = h('p', { class: 'assist-offer' }, h('span', null, 'Tough ladder? Assist hatches faster after lost runs.'), on);
   }
   el.append(
     h('h1', { class: 'display runend-title' }, 'The run ends'),
@@ -33,6 +34,8 @@ export function runOverScreen(m: RunOverModel, _ctx: Ctx): ScreenInst {
 }
 
 const CONFETTI = 28;
+/** A one-shot burst on top of the steady fall: double density for the first ~1.5 s. */
+const CONFETTI_BURST = 28;
 
 export function runWonScreen(m: RunWonModel, _ctx: Ctx): ScreenInst {
   const el = shell('runWon', 'The Crown is yours', 'is-win');
@@ -42,17 +45,21 @@ export function runWonScreen(m: RunWonModel, _ctx: Ctx): ScreenInst {
     const x = (i * 61.8) % 100, d = (i * 37) % 9, hue = ['var(--gold)', 'var(--blue)', 'var(--red)', 'var(--cream)', '#7CC054'][i % 5];
     conf.append(h('i', { style: `--x:${x.toFixed(1)}%;--d:${d * 90}ms;--c:${hue};--r:${(i * 47) % 360}deg` }));
   }
+  for (let i = 0; i < CONFETTI_BURST; i++) {
+    const x = (i * 38.2 + 7) % 100, d = (i * 23) % 7, hue = ['var(--gold)', 'var(--cream)', 'var(--blue)', 'var(--gold)', 'var(--red)'][i % 5];
+    conf.append(h('i', { class: 'burst', style: `--x:${x.toFixed(1)}%;--d:${d * 60}ms;--c:${hue};--r:${(i * 71) % 360}deg` }));
+  }
+  const cl = m.crownLevel === 0 ? '' : ` · Crown Level ${m.crownLevel}`;
   el.append(conf,
-    h('div', { class: 'result-head' }, h('span', { class: 'rays', 'aria-hidden': 'true' }),
-      h('span', { class: 'result-ic', html: picto('crown'), 'aria-hidden': 'true' }),
-      h('h1', { class: 'display result-title gold' }, 'The Crown is yours!')),
+    // The winner at the centre: your King, crowned and large, with the title slamming in under it.
+    h('div', { class: 'result-head won-head' }, h('span', { class: 'rays', 'aria-hidden': 'true' }),
+      h('span', { class: 'won-hero', html: heroIcon(m.hero), 'aria-hidden': 'true' }),
+      h('h1', { class: 'display result-title gold' }, 'The Crown is yours!'),
+      h('p', { class: 'result-sub ribbon' }, `${HEROES[m.hero].name} · ${formatElapsed(m.time)}${cl}`)),
     h('div', { class: 'card runend-card tilt-r' },
       h('div', { class: 'runend-col' },
         h('h2', { class: 'sec-h' }, 'Your swarm'),
-        buildRow(m.build, m.hero),
-        h('div', { class: 'run-stats' },
-          h('span', { class: 'stat' }, h('small', null, 'Run time'), h('b', null, formatElapsed(m.time))),
-          h('span', { class: 'stat' }, h('small', null, 'Crown Level'), h('b', null, m.crownLevel === 0 ? 'Standard' : String(m.crownLevel))))),
+        buildIcons(m.build)),
       h('div', { class: 'runend-col' },
         h('h2', { class: 'sec-h' }, 'Unlocked'),
         unlockCards(m.unlocks))),

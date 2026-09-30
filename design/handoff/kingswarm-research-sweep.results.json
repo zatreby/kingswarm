@@ -1,0 +1,248 @@
+{
+ "workflow": "kingswarm-research-sweep",
+ "script": "design/handoff/workflows/kingswarm-research-sweep.js",
+ "stages": [
+  {
+   "label": "research:retention",
+   "phase": "Research",
+   "status": "done",
+   "result": {
+    "file": "/home/turbo/creative-game/design/research/retention.md",
+    "summary": "The multi-day pull in Vampire Survivors, Brotato, Hades, Slay the Spire, Balatro and Nuclear Throne lives inside the run, plus a cumulative difficulty ladder. It comes from a draft of 3-4 upgrades that combine into a nameable build, then a fast retry. Long-term hooks are unlocked options and difficulty tiers (Danger, Ascension, Stakes, Heat), not stat tweaks. Brotato's ramp of 20 to 90 s waves with a shop after each is the closest analogue to short Kingswarm battles. Kingswarm's ignored charms and the bolt-on quest match documented anti-patterns. Frommel and Mandryk (2022, n=178) found daily quests read as \"a chore / like a job\". Spelunky's one-attempt shared-seed daily is the version that works, and a deterministic sim makes a serverless one feasible. Slay the Spire's designer says single-player is what allows strong combos, so keep drafted runs PvE and online PvP symmetric. The file has 12 mechanisms ranked by fit and three structures: a 6-battle Conquest Run (recommended MVP), a Rival Map, and a Draft Duel. The 3D diorama shows no retention evidence. Cadence numbers are my inference. Several claims are marked UNVERIFIED.",
+    "recommendations": [
+     "Build the draft first: 1-of-3 behaviour-changing swarm upgrades after every battle, with tags, 5-6 slots and duo upgrades that need two matching tags. Do not use stat percentages.",
+     "Restructure a run as about 6 short battles (60 to 150 s, ramping, boss last), 12-15 min total, with instant restart and a loss screen showing build recap and near-miss facts.",
+     "Replace charms and daily quests with unlocks earned by playing, adding a new upgrade or critter every run for the first 10 runs, PvZ-style.",
+     "Add a sequential cumulative Danger 0-5 ladder per hero where each rung adds new rival behaviour (elites, double boss), then opt-in Heat modifiers and hidden duo recipes late.",
+     "Add a small capped assist that grows with losses (Hades God Mode: +20% resistance, +2% per death, cap 80%) so nobody hits a difficulty wall.",
+     "Keep drafted runs PvE. Make online and couch a symmetric alternating-draft best-of-3. If you want a daily, make it a one-attempt shared-seed mode with a share string and no server.",
+     "Log runs locally (pick rate, win rate per upgrade, run length) and tune cadence from playtests. The unlock cadence in the file is a hypothesis."
+    ],
+    "open_risks": [
+     "No first-party retention data for any studied game; the unlock cadence and battle timings are inference.",
+     "Hades boon offer size (3) and the Kasavin quote about Slay the Spire Ascension inspiring Heat were not confirmed in a primary source.",
+     "Nuclear Throne talk contents and Castle Crashers developer statements could not be retrieved.",
+     "The fetch tool's summaries were unreliable for several pages, so some quotes come through secondary text and are tagged in the file.",
+     "Near-miss framing is gambling-adjacent; Balatro's rating changed from PEGI 3+ to 18+ over gambling imagery, so avoid slot-style presentation.",
+     "Drafted PvE power can trivialise the 1v1 AI rival unless rival strength scales with the player's upgrade count."
+    ]
+   }
+  },
+  {
+   "label": "research:game-feel",
+   "phase": "Research",
+   "status": "done",
+   "result": {
+    "file": "/home/turbo/creative-game/design/research/game-feel.md",
+    "summary": "163-line research file with a 10-bullet bottom line, a P0-P3 checklist with values, and sections on shake, hitstop, audio, readability at 100+ units, what to avoid, and an implementation order. Every value is tagged as coming from a primary source, a secondary source, or as my own tuning starting point. Primary sources read directly: Nijman's Art of Screenshake and Juice it or lose it (auto-caption transcripts), Eiserloh's GDC 2016 trauma-shake slides, the Celeste player source (dash 0.15 s, freeze 0.05 s, grace 0.1 s), Sakurai's Famitsu hitstop column, the SmashWiki hitlag formula, the TF2 illustrative-rendering paper, and WCAG 2.3.1. Nijman's ~20 ms sleep on hit and kill is the anchor for hitstop. It also covers the Smash formula (6 frames minimum), which does not transfer to a swarm game. The prototype's global `freeze`, uniform-random shake and roughly 10 Hz hut white-flash are flagged as problems. Marked UNVERIFIED: Hades combat-feel numbers, Sakurai's video contents, Nuclear Throne slider ranges, Vampire Survivors internals, Apex movement buffering, and Swink's book text.",
+    "recommendations": [
+     "Keep hitstop out of the simulation and make it presentation-only. Global freezes desync the host-authoritative online mode; Sakurai also limited hitstop in free-for-all for the same reason.",
+     "Give each critter hit at most a 20-50 ms local flash on the target, and no global freeze. Save 50-120 ms holds for events such as hut capture, hero death and throne hits, capped at 120 ms.",
+     "Replace the uniform-random shake with a trauma model: shake = trauma squared, linear decay, smoothed noise, and per-source caps so 100 impacts cannot stack to maximum.",
+     "Ship a shake slider and a flash-reduction toggle from the start, and remove the ~10 Hz white hut flicker (WCAG 2.3.1 allows at most 3 flashes per second).",
+     "Replace the oscillator beeps with layered samples: transient, body and thump. Add pitch variance of +/-1-2 semitones, 4-6 variants, a voice cap and ducking.",
+     "Scale sound by the number of hits in a short window instead of playing one voice per critter.",
+     "Use bigger-than-realistic projectiles, a muzzle flash on the first frame, and camera kick opposite to the aim direction, as in Vlambeer's games. Playtest hero recoil separately, because it can fight precision aiming.",
+     "For readability at 100+ units, use three visual tiers (hero, structure, critter), silhouette tests, and owner colour by temperature plus a non-colour cue.",
+     "Aggregate feedback instead of per-critter damage numbers, cap particles, and bake persistent debris into one ground texture."
+    ],
+    "open_risks": [
+     "Most numeric starting values (shake amplitude, squash ratios, particle caps, ducking dB, voice caps) are my tuning suggestions, not sourced figures, and need playtesting.",
+     "The Nijman transcript comes from machine-translated auto-captions; the ~20 ms sleep figure is his 'or something' phrasing.",
+     "Sakurai's video contents were not transcribed because YouTube rate-limited the captions. The Eight Hit Stop Techniques list comes from a search summary.",
+     "Hades combat-feel numbers, Nuclear Throne slider ranges, Vampire Survivors caps and pooling, Apex/Titanfall buffering values, and Swink's book text are UNVERIFIED.",
+     "Readability sources for Overwatch and Clash Royale are secondary. Only the TF2 paper is primary."
+    ]
+   }
+  },
+  {
+   "label": "research:genre-teardown",
+   "phase": "Research",
+   "status": "done",
+   "result": {
+    "file": "/home/turbo/creative-game/design/research/genre-teardown.md",
+    "summary": "The teardown is written (141 lines): a bottom-line section, then evidence with source URLs for Pikmin, Tooth and Tail, Overlord, Right Click to Necromance, Thronefall, Bad North, Mushroom Wars 2, Clash Royale, Minion Masters, Fat Princess, Castle Crashers, Kingdom Two Crowns, Crowd City/Count Masters and Slither. The main finding is that .io crowd games are shallow because they have one unit type, no counters and no persistence, not because they lack a meta layer. The deeper games have a few irreversible decisions per minute and keep controls to one layer. Their long-tail meta changes the decision space (decks, squads, mutators) rather than adding stat tweaks. Tooth and Tail shows the pitfalls: cheap-unit spam, \"bigger army wins\", and an online-only population that has collapsed. Fetched pages were summarised by a small model, so some figures are secondary. Minion Masters, Right Click to Necromance and Castle Crashers rest on snippets only, and the decisions-per-minute figures are my estimates. All are tagged in the file.",
+    "recommendations": [
+     "Add 3 critter types in a cycle (Biter > Bruiser > Lobber > Biter) plus a Runner/Sapper for fast hut capture. Type comes from the hut you hold, so composition is a map-control decision and stays on the single control layer (move + hold-to-fire).",
+     "Give each type its own firing behaviour (fast stream, heavy slow shot, arcing splash) so the swarm-as-gun feel carries the depth. Do not add a selection or command layer.",
+     "Add three map features: 1-2 chokepoints, terrain that keys types (a river only Runners cross, walls Lobbers fire over), and a neutral guarded objective that rewards a specific mix. Keep the Crown as the forcing objective.",
+     "Build comeback from structure, not rubber-banding: time-escalating spawn tempo for both sides, reversible captures, and a cheap disruptor. Avoid rich-get-richer power spikes.",
+     "Replace stat charms with type-level rewrites drafted between 3-6 minute rounds in a 15-25 minute run (for example \"Biters split on death\"). Add optional mutator and mission challenge layers, as Thronefall does.",
+     "Guard against Tooth and Tail's failure modes: the cheapest unit dominating, bigger army always winning, and 1v1-only online with no AI or co-op fallback.",
+     "Playtest all type stats and cap costs; the numbers in the proposal are starting points, not evidence-backed."
+    ],
+    "open_risks": [
+     "Some figures come from search snippets or small-model page summaries, tagged [S] in the file; the Clash Royale wiki fetch was blocked, so its overtime rules are unchecked.",
+     "Minion Masters, Right Click to Necromance and Castle Crashers have no primary design retrospective; the lessons drawn from them are weak evidence.",
+     "The hyper-casual D30 retention figure is a vendor-blog average, not data for Crowd City or Count Masters.",
+     "Decisions-per-minute figures are analyst estimates, not measurements.",
+     "The 3+1 type cycle is an inference from Clash Royale and Bad North; whether it fits swarm-as-gun firing needs a playtest."
+    ]
+   }
+  },
+  {
+   "label": "research:tech-rendering",
+   "phase": "Research",
+   "status": "done",
+   "result": {
+    "file": "/home/turbo/creative-game/design/research/tech-rendering.md",
+    "summary": "The findings file is written (129 lines). I ran scratch experiments on this machine (Intel Iris Xe, system Chromium 153, headless), tagged [MEASURED] in the file. Phones were not measured; that part is UNVERIFIED. Recommendation: three.js 0.186.1 with WebGLRenderer, not WebGPURenderer. Measured on Iris Xe at 1080p, WebGL took 2.2 ms/frame for 300 instances with shadows. A toon scene with outline hull, vertex squash and 2 skinned heroes took 2.7 ms. WebGPU was slower in my A/B (3.6 ms) and needs unsafe flags in headless. A tree-shaken WebGL bundle is 159 kB gz. Babylon (~1.8 MB gz), PlayCanvas, PixiJS and Godot web (33-40 MB wasm, no threads on GitHub Pages) are rejected. The file also holds the package list, a starter architecture and a gotcha list. It covers deterministic sim patterns, where Math.sin, cos, pow and hypot are implementation-approximated in the ECMAScript spec, and a SwiftShader Playwright recipe. In r186, PCFSoftShadowMap is removed, Clock is deprecated and renderAsync is deprecated. typescript-eslint peers TypeScript below 6.1, so I recommend TS 6.0.3 rather than 7.0.2. Release dates come from npm, because WebFetch summaries of GitHub releases gave wrong 2024 dates.",
+    "recommendations": [
+     "Use three@0.186.1 with WebGLRenderer for v1. Keep WebGPU/TSL as a later swap confined to src/render.",
+     "Get the look without post-processing: MeshToonMaterial with a NearestFilter gradient, an inverted-hull outline as a second InstancedMesh sharing the first one's instanceMatrix, a 1024 PCF shadow map, and per-instance aPhase squash/hop in onBeforeCompile. All of this ran here.",
+     "Split the code in two. Keep src/sim pure TypeScript with structure-of-arrays typed arrays, a seeded RNG (mulberry32 or sfc32), no Math.random/Date/performance.now, and only exact math (+ - * / sqrt abs floor) plus a LUT for trig. Render with interpolation alpha.",
+     "Use a typed-array uniform grid for neighbour queries. At 300 units it took 14 us/tick against 185 us for brute force, and a Map<string> grid was slower than brute force.",
+     "Run visual CI on SwiftShader at 640x360 with a manual clock (window.__ks.step). Take baselines from SwiftShader only, because Iris Xe pixels differ. preserveDrawingBuffer is not needed for page.screenshot.",
+     "Pin vite@8.3.1, vitest@5.0.3, @playwright/test@1.63.0, typescript@6.0.3, @types/three@0.186.0, and Node >=22.12.",
+     "Keep the existing Canvas2D renderer as the WebGL-failure fallback instead of adding PixiJS.",
+     "Test on a real mid-tier Android phone and an iPhone before promising 60fps."
+    ],
+    "open_risks": [
+     "Phone performance was not measured. The Iris Xe headroom (about 6x) does not transfer to budget phones.",
+     "Vertex-patched materials probably need a matching customDepthMaterial so shadows squash too. Not verified.",
+     "Rim light via onBeforeCompile was not tested.",
+     "TypeScript 7.0.2 compatibility with @types/three and the wider toolchain is unverified; typescript-eslint peers TypeScript below 6.1.",
+     "Linux and Android WebGPU coverage is stated inconsistently across sources (web.dev says Linux is in progress; Utsubo says Chrome 147).",
+     "Steam packaging (Electron or Tauri) was not researched.",
+     "Babylon, PlayCanvas and PixiJS bundle sizes and Vitest 5 screenshot details come from secondary sources.",
+     "Playwright's own bundled Chromium was not tested. All runs used the system Chromium 153 via executablePath."
+    ]
+   }
+  },
+  {
+   "label": "research:netcode",
+   "phase": "Research",
+   "status": "done",
+   "result": {
+    "file": "/home/turbo/creative-game/design/research/netcode.md",
+    "summary": "The file is 138 lines: a bottom-line section first, then evidence with source URLs and [V]/[S]/[M]/[UNVERIFIED] tags. Recommendation: keep host-authoritative snapshots with interpolation for v1 and 2v2, and predict only the guest's own hero. Lockstep would add input delay to hero movement. Rollback is a CPU risk on phones. The prototype's real problem is its JSON snapshot: I measured 6.6 KB for 300 critters, about 790 kbps at 15 Hz. A quantized binary delta is about 25-75 kbps under my assumptions. Interpolate 3 send intervals behind. PeerJS 1.5.5 was last released 2025-06-07, and its `reliable:false` only means unordered, not lossy. Trystero (v0.25.4, 2026-08-30) is active; simple-peer is stagnant; WebTransport is client-server only. The current prototype is STUN-only. Add Cloudflare Realtime TURN (1,000 GB free, then $0.05/GB) with credentials minted by a Worker, since Cloudflare says the key must stay server-side. Metered's free quota is inconsistent (500 MB vs 20 GB). STUN-only failure is roughly 10-20% by dated 2015-16 data. The ECMAScript spec marks `Math.sin`, `pow`, `exp` and similar as implementation-approximated. The file lists day-one simulation rules and what to defer.",
+    "recommendations": [
+     "Ship v1 with host-authoritative snapshots at 15-20 Hz. Replace the JSON snapshot with quantized binary deltas (about 25-75 kbps), interpolate 3 send intervals behind, and predict only the guest's own hero with input-seq reconciliation.",
+     "Add TURN before launch: a Cloudflare Worker /ice endpoint mints short-TTL credentials (about 900 s), with Turnstile and rate limiting in front. Never ship the TURN key in the static page. Metered is the backup.",
+     "Move snapshots to an unordered, maxRetransmits:0 data channel plus a reliable channel for events. PeerJS cannot express this, so put a Transport interface in front now and plan to move to native RTCPeerConnection with a small Worker/Durable Object signaling room, or Trystero.",
+     "From day one, make the sim a deterministic fixed-step pure function: seeded PRNG, typed-array state with serialize and hash, no transcendental Math.*, inputs as small structs, sim events as data, and a CI hash test in Chromium, Firefox and WebKit.",
+     "Defer rollback, lockstep, a dedicated Durable Object server, WebTransport, matchmaking and reconnect. Revisit only if the hash tests are green and a mode needs them.",
+     "Verify before launch: whether Cloudflare TURN needs a card or has a spend cap, Metered's real free quota, real-sim tick cost on a phone, and your own ICE and relay failure rate from getStats() telemetry."
+    ],
+    "open_risks": [
+     "Cloudflare TURN credit-card requirement and hard spend cap could not be confirmed (community thread returned 403).",
+     "Metered free quota is inconsistent across sources (500 MB vs 20 GB); ExpressTURN's free-tier claims are disputed.",
+     "No 2026 primary data on STUN-only NAT success; the only figures are the 2015-16 callstats.io data and industry lore.",
+     "The delta bandwidth figures rest on assumed encoding and movement fractions, not a real Kingswarm sim.",
+     "The rollback CPU estimate is from a toy 300-unit benchmark in Node; the real sim on phones may be 10-50x heavier per tick.",
+     "JavaScriptCore vs V8 Math.* disagreement percentages come from a search summary I could not reproduce."
+    ]
+   }
+  },
+  {
+   "label": "research:distribution",
+   "phase": "Research",
+   "status": "done",
+   "result": {
+    "file": "/home/turbo/creative-game/design/research/distribution.md",
+    "summary": "The report is 123 lines and covers Poki, CrazyGames, GameSnacks, YouTube Playables, itch.io, Newgrounds, Steam wrappers, Steam pricing/demo/Next Fest and store-page basics, a go-to-market path, and a technical constraints checklist. Sources are tagged primary or secondary, and unconfirmed claims are marked UNVERIFIED. Main findings: portal income is small for a first game (about $500-3,000/month per Poki's developer relations). Poki's web-exclusive deal runs 5 years and blocks other portals, though Steam stays free. Size limits: Poki asks for 5 MB initial / 8 MB total, CrazyGames allows 50 MB initial (20 MB for mobile-homepage eligibility), and GameSnacks and Playables target 5-15 MiB. Poki and GameSnacks block external requests by default; v0.5 loads PeerJS from cdnjs and Google Fonts, so online play needs new plumbing for portals. Portals grade the first session on click-through, time on page, and conversion to first gameplay start. Vampire Survivors (Phaser, then Electron, itch.io browser build to Steam) and CrossCode (NW.js) show web tech can ship on Steam. Tauri's Linux WebGL problems make it a poor fit for a Three.js game. Three.js 0.186.1 measures about 194 KB gzip before tree-shaking. Steam Next Fest median is about 806 wishlists.",
+    "recommendations": [
+     "Treat the browser build as a funnel to Steam, not the business: itch/own-host playtest, then CrazyGames non-exclusive, then Steam Coming Soon page months before a Feb or Jun 2027 Next Fest.",
+     "Do not accept Poki's default 5-year web-exclusive deal until the Steam plan is set; consider its non-exclusive flat fee instead.",
+     "Make solo run mode plus same-keyboard 2P versus the portal core; online-by-link is a bonus that stays off in portal builds until CSP approval.",
+     "Bundle everything (fonts, PeerJS/netcode), with zero third-party requests in portal builds, and host our own signaling and TURN server.",
+     "Hard budget of 5 MB initial / 8 MB total for portal builds. Aim for first gameplay under 10 s with one menu click, guest-first and no login.",
+     "Build for touch, mouse, keyboard and gamepad, with a 16:9 letterboxed stage (640x360 to 1920x1080) and a fixed-timestep sim.",
+     "Use one codebase with a platform adapter for ads, save, gameplay events, external links and online on/off. Add a Storage interface and pause on blur for solo/local play.",
+     "Wrap Steam builds with Electron or NW.js plus steamworks.js, and test Steam Input on Steam Deck before pinning an Electron version.",
+     "Steam plan: demo of 15-30 min ending on a cliffhanger, live at least 1 month before Next Fest. Price at $9.99-12.99 (my judgment from secondary pricing data)."
+    ],
+    "open_risks": [
+     "CrazyGames and Poki exact revenue-share percentages are not published in primary docs (CrazyGames 60/70 comes only from secondary citing jam terms).",
+     "Whether Poki or CrazyGames will approve PeerJS cloud signaling, or public or own STUN/TURN, is unconfirmed.",
+     "Wrapper technology behind Cookie Clicker and Antimatter Dimensions Steam builds is unverified.",
+     "Many pricing, RPM and wishlist-conversion figures are secondary and some are dated (2018 and 2020 datasets).",
+     "Vampire Survivors' browser-to-Steam path was driven by YouTube creators after the Steam release, so it is weak evidence that a browser hit turns into a Steam hit."
+    ]
+   }
+  },
+  {
+   "label": "research:assets-audio",
+   "phase": "Research",
+   "status": "done",
+   "result": {
+    "file": "/home/turbo/creative-game/design/research/assets-audio.md",
+    "summary": "The findings file is written (127 lines). The shortlist is a single art style from KayKit (CC0), with ffmpeg audio conversion tested and gltf-transform model optimization not run. The full fetch script ran end to end with curl (175 MB, 74 s) into scratch, then I cleaned it up.\n\n- **Art:** Adventurers heroes (5 GLBs, 3.6 MB each, 76 embedded clips) plus Medieval Hexagon (buildings in 4 team colors, capture-stage and destroyed models, flags, nature, one shared 1024 px atlas). Critters are Kenney Mini Dungeon `character-orc` (374 tris) and `character-human` (465 tris).\n- **Critter warning:** don't use skinned meshes for 100+ critters, since three.js has no native instanced skinning. Use instanced static poses or vertex-animation textures. I did not render Kenney next to KayKit, so their visual fit is unverified.\n- **Music:** one composer (RandomMind, CC0) for menu, lobby, battle, victory and defeat, plus \"Determined Pursuit\" (CC0) for the Crown climax, about 5 MB as OGG.\n- **SFX:** Kenney Impact, RPG and Interface packs, rubberduck creature and RPG SFX, and artisticdude swishes.\n- **License trap:** Quaternius's license page now reads \"Quaternius Asset License v1.0\" (no redistribution of the assets themselves). The pack pages and the copies on OpenGameArt and poly.pizza still say CC0.\n- **Fonts:** Lilita One for titles, Nunito for the HUD (both OFL).\n- **Procedural audio:** ZzFX and jsfxr are supplements only, because the owner disliked beeps.",
+    "recommendations": [
+     "Adopt KayKit as the single art style: Adventurers for Knight, Mage and Barbarian heroes; Medieval Hexagon for huts, throne (castle), tower, flags, trees and rocks, with team colors and stage_A/B/C models for capture progress.",
+     "Do a one-hour look test of a KayKit hero, a hex tile and a Kenney orc side by side before committing to Kenney critters; fall back to a procedural blob critter if they clash.",
+     "Render the swarm with InstancedMesh and procedural hop, or bake clips to vertex-animation textures (three-vat, young library); use SkinnedMesh only for the 2 to 4 heroes.",
+     "Use RandomMind's CC0 medieval tracks for menu, lobby, battle, victory and defeat, plus Determined Pursuit for the 1:30 Crown climax; normalize to about -18 LUFS and ship OGG (Safari supports it since 18.4).",
+     "Build the SFX palette from Kenney Impact, RPG and Interface packs, rubberduck cute_* and hurt_* creature SFX, and artisticdude swishes (0.07 to 0.2 s each, random pick with pitch variation); use ZzFX or jsfxr only as pitch-varied layers.",
+     "Treat Quaternius as optional: it has moved to a custom license that forbids redistributing the assets themselves, so avoid it in a public repo, or snapshot the license and source URL if you use it.",
+     "Run the download commands in the file, keep raw sources in a gitignored assets-src/, commit only converted assets plus LICENSES.md, and archive the files yourself because Kenney URLs carry version hashes.",
+     "Optimize with gltf-transform (script to strip unused clips, downsample atlas to 128-256 px, meshopt) and ffmpeg. The gltf-transform step is untested, so confirm the size savings.",
+     "Fonts: Lilita One for titles, Nunito or Fredoka for the HUD, bundled via @fontsource with no CDN."
+    ],
+    "open_risks": [
+     "Kenney chibi critters and KayKit heroes were never rendered together, so style cohesion is unverified.",
+     "gltf-transform and FBX2glTF were not run because installs were forbidden, so the post-optimization sizes are estimates.",
+     "The KayKit GitHub repo is v1.0 (no Ranger). The itch.io page lists newer content, and itch downloads may not be scriptable.",
+     "Quaternius's license terms changed on 2026-08-28. Pack pages and mirrors still say CC0, but the license page shows a custom no-redistribution license.",
+     "three-vat is very new (0 stars, published weeks ago), so its maturity and performance are unproven.",
+     "Freesound originals need a login and the crowd-chatter packs found are CC-BY, so there is no CC0 crowd chatter yet.",
+     "RandomMind's Battle is not a seamless loop, and Minstrel Dance was not duration-tested.",
+     "The Kenney zip URLs contain version hashes and OpenGameArt files can be removed, so links can break."
+    ]
+   }
+  },
+  {
+   "label": "research:onboarding-ux",
+   "phase": "Research",
+   "status": "done",
+   "result": {
+    "file": "/home/turbo/creative-game/design/research/onboarding-ux.md",
+    "summary": "Wrote a 191-line research file: a bottom-line section, a beat-by-beat FTUE script, HUD spec, menu/flow map, per-device control schemes, an accessibility checklist, and sourced evidence. Verified primary sources: Fan's 10 tutorial tips (Game Developer summary; the slides PDF was 403), Hayashida's four-step structure, Poki and CrazyGames requirements (Poki: under 8 MB, 10 s load bounce, minimal menus; CrazyGames: at most 1 click, 50 MB, 20 s to gameplay, tutorial-first loading, ten test viewports), Game Accessibility Guidelines, VALORANT's clarity article, Okabe-Ito palette, WCAG, Apple onboarding guidance, Hades God Mode figures. Not verified: Extra Credits and GMTK transcripts, Clash Royale's exact tutorial flow (a blog claims 7 training matches, Apple says five short tutorials), and any public first-session drop-off data. Those are marked UNVERIFIED. Two challenges to the direction: do not copy the \"lose the first real match\" pattern, and the prototype's 13 px HUD labels fail at 800x450.",
+    "recommendations": [
+     "First launch is one click (Play) straight into a guided battle 1; the click also unlocks browser audio. No menu, hero pick or charms.",
+     "Teach only move, hold-to-fire and recall in battle 1, using adaptive prompts of 8 words or fewer. Introduce dash and abilities by context in battle 2. Structure battle 1 as intro, develop, twist (Crown opens), conclude, with a readable rival handicap so a first win is near-certain.",
+     "Follow the win with the animated 3-card Mutation draft inside minute 3. It is the play-for-days hook, so do not put stats or XP screens before it.",
+     "HUD carries five things (timer and Crown bar, building counts, swarm count anchored to the King, ability cooldowns, in-world rival tells). Everything else is diegetic. Design text at 20 px or more on the 1280 reference so it stays legible at 800x450.",
+     "Team identity uses hue, luminance and silhouette together: Okabe-Ito blue #0072B2 vs vermilion #D55E00, plus different critter shapes and rim lighting. Add a colour-option setting. Never rely on colour alone.",
+     "Design touch as a first-class layout in M1: floating left stick, right-thumb aim with hold-to-fire plus aim assist, three 56 px action buttons. Bind keys by event.code and offer aim assist and hold/toggle fire.",
+     "One-screen result with one focused button (Next rival, Rematch or New run) and near-miss facts. Bind Pause to P, Esc and Start (Poki and CrazyGames disagree on Esc). Auto-pause on blur only in single-player.",
+     "Ship settings at M1/M2: separate music and SFX volume, remap, screen-shake and flash toggles, UI scale, Assist, all persisted with try/catch. Audit the Crown-open and Frenzy effects against the flash thresholds (more than 3 flashes/s over 25% of the screen).",
+     "Stay under 8 MB initial and load battle 1's assets first, streaming the rest during play. Instrument time to first input, first capture, battle 1 win rate and quit-at-draft rate, because no primary portal drop-off data exists."
+    ],
+    "open_risks": [
+     "Tilted 3D camera may occlude critters behind buildings and the King; test 100-critter screenshots before adding props.",
+     "A guaranteed first win can feel patronising if the handicap is hidden; use visible rival behaviour such as Bumble dawdling.",
+     "Touch fire with aim on a small fixed-camera arena is unproven for this game; prototype it before locking the M3 layout.",
+     "Auto-pause on tab blur conflicts with online play and the worker-timer fix; limit it to single-player.",
+     "Extra Credits and GMTK content and the Clash Royale tutorial specifics could not be verified.",
+     "No primary first-session drop-off data was found; the numeric targets (90% first-timer win, 0.6 s telegraph, aim-assist cone) are my inference and need playtesting.",
+     "The file is 191 lines, slightly over the ~180 target."
+    ]
+   }
+  },
+  {
+   "label": "research:fun-ai",
+   "phase": "Research",
+   "status": "done",
+   "result": {
+    "file": "/home/turbo/creative-game/design/research/fun-ai.md",
+    "summary": "138-line research file. It leads with 10 bottom-line bullets, then covers architecture, 5 rival personalities with tells and flaws, PvE and boss design, difficulty knobs and DDA evidence, a bot-sim metrics plan, and a source list. Primary evidence was read directly: the F.E.A.R. GDC paper, Valve's L4D AI slides (Director pacing numbers), the Mark/Dill utility-AI slides, the Halo 2 article and Halo 3 leadership docs, Riot's LoR RL write-up, and the Ubisoft and Hearthstone balance papers. Recommended architecture is utility scoring over about 6 intents, executed by a small Action stack that outputs the same input frame a human produces, so difficulty is execution error plus unlocked tactics rather than cheating. Personalities are data rows with a signature play, a tell and a flaw: Gorm Rusher, Pip Turtle, Sable Trickster, Vex Hunter, Bumble Hoarder, with Queen Mora as the boss wrapper. PvE uses a seeded L4D-style Director, Halo-style camps where killing the Chieftain breaks the guards, and a shuffled boss deck. Bot-sim covers 8 metrics with target bands and 7 scripted regression bots. Unverified items are marked: RE4 rank numbers, Clash Royale bots, and SC2 cheater details.",
+    "recommendations": [
+     "Use utility scoring for 6 intents (Expand, Defend, Raid, HuntHero, TakeCrown, Regroup) plus a small Action stack with reason strings; skip GOAP and big behavior trees.",
+     "Make personalities data rows (weights, 2 signature plays, 1 tell, 1 flaw) and give every consequential rival action a visible or audible tell 0.6-1.5 s ahead; no beeps.",
+     "Route the rival through the same input pipe as a human, with reaction delay, aim error, tactic whitelist and a visible economy handicap only at low tiers. Label any real cheat 'Cheater' and never rubber-band rival stats.",
+     "Build a seeded L4D-style Director that modulates neutral PvE frequency, not amplitude. Add Halo-style camps with a Chieftain whose death breaks the guards, and a shuffled boss deck {Brood Mother, Bulwark, Nothing}. Add a Reaper-style overtime timer.",
+     "Make the sim pure TS with a seeded PRNG and headless bot-vs-bot runs of about 2,400 games per gate. Track win-rate matrix by seat and personality, skill-ladder monotonicity, match length, time-to-first-capture, lead changes, comeback rate, snowball index and degeneracy flags.",
+     "Add scripted golden bots as CI regression tests (Idle, TurtleForever, ThroneRush, CrownCamp, SpamFire, random-input Monkey) with tolerance bands and a baseline JSON. Calibrate target bands against the first 30-50 human playtests."
+    ],
+    "open_risks": [
+     "Tell readability at a fixed tilted 3D camera with 100+ critters is untested.",
+     "Cross-engine floating-point determinism is unverified, so CI reproducibility may be same-engine only.",
+     "The metric target bands are my proposals, not evidence, and need recalibrating on human telemetry.",
+     "Unverified: exact RE4 rank numbers, Clash Royale bots, and SC2 cheater-level details (Liquipedia returned 403; snippets only).",
+     "The visible 'offer a tier change' DDA prompt may be ignored, as the owner ignored charms."
+    ]
+   }
+  }
+ ]
+}

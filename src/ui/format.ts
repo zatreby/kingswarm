@@ -37,3 +37,10 @@ export function ordinalBattle(index: number, total: number, boss?: boolean): str
 export function plural(n: number, one: string, many: string): string {
   return n + ' ' + (n === 1 ? one : many);
 }
+
+/** A rival's short name for tight spots: the words before " the ", else the whole name.
+ *  "Pip the Tinkerer" -> "Pip", "King Mora the Crowned" -> "King Mora", "Mother Brood" -> "Mother Brood". */
+export function shortName(name: string): string {
+  const i = name.indexOf(' the ');
+  return i > 0 ? name.slice(0, i) : name;
+}

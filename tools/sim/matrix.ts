@@ -1,6 +1,6 @@
 // Round-robin win-rate matrix of chosen profiles.
 //   npx tsx tools/sim/matrix.ts --profiles novice,average,expert,bumble,gorm --n 60 [--level 0]
-//     [--duration 150 --crown 90] [--map meadow] [--seed 1] [--workers 4] [--json out.json]
+//     [--duration 150 --crown 90] [--map meadow] [--seed 1] [--workers 4] [--tune path=v,...] [--json out.json]
 // Cell (row, col) = row's win rate against col (draws count half). Each pair plays n matches with
 // seats alternating; the diagonal is a mirror match (row vs itself) only with --mirror.
 import { writeFileSync } from 'node:fs';
@@ -8,6 +8,7 @@ import { profileFor } from '../../src/ai';
 import { summarize } from '../../src/ai/stats';
 import type { Summary } from '../../src/ai/stats';
 import { parseArgs } from './args';
+import { parseTune } from './tune';
 import { makeJobs, poolSize, runJobs } from './pool';
 import type { Job } from './pool';
 
@@ -16,7 +17,7 @@ async function main(): Promise<void> {
   const ids = a.list('profiles') ?? ['novice', 'average', 'expert', 'bumble', 'pip', 'brood', 'gorm', 'sable', 'mora'];
   for (const id of ids) profileFor(id);
   const n = a.num('n', 60), level = a.num('level', 0), seed = a.num('seed', 1);
-  const base = { map: a.str('map', 'meadow'), duration: a.num('duration', 150), crownOpensAt: a.num('crown', 90) };
+  const base = { map: a.str('map', 'meadow'), duration: a.num('duration', 150), crownOpensAt: a.num('crown', 90), tune: parseTune(a.list('tune')) };
   const pairs: [number, number][] = [];
   for (let i = 0; i < ids.length; i++) for (let j = i + (a.has('mirror') ? 0 : 1); j < ids.length; j++) pairs.push([i, j]);
   const jobs: Job[] = [];

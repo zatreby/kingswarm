@@ -1,0 +1,214 @@
+{
+ "workflow": "kingswarm-render-build",
+ "script": "design/handoff/workflows/kingswarm-render-build.js",
+ "stages": [
+  {
+   "label": "render:scene",
+   "phase": "Scene",
+   "status": "done",
+   "result": {
+    "built": [
+     "Renderer contract in /home/turbo/creative-game/src/render/index.ts. createRenderer/loadMatch/onEvents (no-op until stage 2)/render/screenToWorld/worldToScreen/setAim/resize/setOptions/dispose are all implemented. Lab-only extras are debugView and showcase (exported as RendererDebug). Rendering is WebGL2, MeshToonMaterial with a 3-step gradient, PCFShadowMap, NoToneMapping and no post-processing.",
+     "Static shadow map: only static things cast real shadows (island, buildings, trees, rocks). The map re-renders on loadMatch and on quality change. Critters, Kings, turrets and flags use blob or disc shadows. This saved about 1.5 ms per frame.",
+     "Camera (/home/turbo/creative-game/src/render/camera.ts): 56 degree tilt, 28 degree FOV. It bisects distance until the island outline, the rim-tree height and the near cliff fit in NDC, then re-centres vertically. screenToWorld is a ray against y=0. worldToScreen returns CSS px relative to the canvas top-left.",
+     "Island (/home/turbo/creative-game/src/render/island.ts): rounded island with a seeded wobbly outline and a faceted cliff that flares outward so the 56 degree camera sees it. Water has a depth gradient, a foam/shallows band and faint animated glints. The ground is a 48 px/unit canvas texture: soft blurred grass patches, blade flecks, a darker rim, dirt paths (2 nearest neighbours within 8.2 units, gently curved), dirt yards and pond banks. Obstacles: 'rock' is a KayKit rock cluster, 'trees' a tree clump with bushes, 'pond' a water disc with lilies and reeds. Seeded decor (map-id hash) keeps out of capture zones, paths and obstacles: tall trees only on the far and side rims, low bushes/rocks/flowers on the near rim, flowers, tufts and pebbles inside. Everything is instanced per model.",
+     "Asset pipeline: /home/turbo/creative-game/tools/assets/fetch-kaykit.sh uses the tested sparse checkout. /home/turbo/creative-game/tools/assets/build-models.mjs builds /home/turbo/creative-game/public/models/kit.glb: 16 models in one GLB, the shared atlas cut to 256 px, quantized + meshopt. For team buildings it diffs the blue and red variants' UVs and bakes a per-vertex _TEAM mask. The renderer then tints one shipped model per owner: neutral parchment #D9CFB4, blue, red, or colour-blind orange. Provenance is in /home/turbo/creative-game/licenses/art.md. The build is reproducible (same md5 on re-run). Added pinned devDependencies: @gltf-transform/cli/core/functions/extensions 4.5.1, meshoptimizer 1.1.1, sharp 0.35.5.",
+     "Buildings (/home/turbo/creative-game/src/render/buildings.ts): Throne = KayKit castle (wider, squashed to 0.74 height), Hut = home_A/home_B alternating, Tower = tower_A, Crown = well (turned 45 degrees). Owned buildings get a waving flag: Blue swallow-tailed, Red triangular. Neutral has a parchment roof and no flag. The Crown shows a floating, bobbing, spinning gold crown with a halo in the crown and overtime phases, plus an outer gold hold ring: Blue arc clockwise, Red counter-clockwise, by world.crown / 10.",
+     "Capture rings (/home/turbo/creative-game/src/render/rings.ts): a shader ring whose arc fills clockwise from screen-up by control/100 in the owner's or claimant's colour, with dark rims and an owner zone tint. Contested shows marching white stripes plus a pulse. Colour-blind mode adds notches to the orange team's arc. A second stencil-masked ghost pass draws the ring only over critter pixels, so it reads through crowds but never paints over buildings or Kings; it is hidden when nobody stands on the ring.",
+     "Critters (/home/turbo/creative-game/src/render/critters.ts): one body + outline InstancedMesh per team, with outlines sharing the body's instanceMatrix. Blue is round; Red has a tall swept-back tuft. Eyes, pupils, brute brow ridge and back spikes, bomber bomb (orange band, flickering spark), guard helmet and blob shadows are each one shared InstancedMesh. Kinds scale differently (runt 0.74 and lighter, brute 1.34 and darker). Animation per state: hop phase from tint + distance moved with take-off/landing squash, finishing the current hop on stop; idle wobble; garrison slow bob looking outward; hold agitated jitter; fly height from a parabola with apex scaled by distance, Piercers flat, pitched along the arc, stretched by speed, tumbling; stunned squashed with a pale tint; slowed frost tint. Eyes: the body yaws toward velocity, else the nearest enemy (staggered 1/4 per frame), else outward from the garrison, else the viewer. Pupils lead the turn, eyes blink, hatchlings pop in with overshoot. No per-frame allocations.",
+     "Kings (/home/turbo/creative-game/src/render/kings.ts): blob body about twice a critter, slightly lighter than the team's critters, with belly, big eyes, gold crown, a cape that trails velocity and flares with speed, and a team ring plus dark rim. Nine looks: brawler (fists, headband), blink (hood, scarf), warden (kettle helmet, shield), bumble (sleepy lids, tiny askew crown, cheeks), pip (goggles, wrench, backpack), brood (7 eyes, egg sacs), gorm (fat, horned helmet, tusks), sable (mask band, twin daggers), mora (tall 7-point crown with gem, long cape, sceptre). Rigid parts are merged per material, about 12 draws per King.",
+     "King animation and states: breathing, hop and lean, facing the aim; dash stretch, stun squash plus orbiting stars, fresnel shield bubble, rampage orange aura plus emissive, invulnerability blink, and a dead ghost with a respawn ring floating above his Throne. The HP bar is a billboard shown only when hurt, in danger orange below 30%. The local King gets a billboard chevron (always on top) and a thicker light ring that also draws through critters. Both Kings get an x-ray silhouette where something else hides them (stencil ignores self-occlusion).",
+     "Aim for setAim(team): a dashed range ring at 8.25 x throwRangeMul, and a reticle along hero.aim at the pointer distance (clamped to range), or 60% of range without a pointer.",
+     "Turrets (procedural tripod with a team-coloured crossbow head that rotates to turret.aim) and zones (scorch: soot, round flickering embers, hot ragged rim; vortex: spiral arms in team light), both from small fixed pools, in /home/turbo/creative-game/src/render/zones.ts.",
+     "Lab: /home/turbo/creative-game/lab/render.html and /home/turbo/creative-game/lab/render-lab.ts. Fixture Worlds are built by hand from types.ts only, including the fields the sim engineer added mid-task. Scenes: opening, midfight, crown, mutants, lineup (&focus=kings|critters|buildings|kingsA|kingsB), plus extra states and stress (200 critters). Params: &view=x,y,width close-up, &cb=1, &quality=, &info=1. Fake 60 Hz animation covers followers orbiting and shuffling, garrison patrol, hold jitter, runners, looping flights and a strolling King. A mouse probe draws a 3D ring at screenToWorld(mouse) and a DOM ring at worldToScreen of that point. DOM labels are anchored via worldToScreen. window.__lab = { renderer, world, checkMapping(), bench(n) }.",
+     "Vitest: /home/turbo/creative-game/src/render/mapping.test.ts, 14 tests covering sim-to-scene mapping, flight height/apex/slope, ring state, path pairing, angle wrap, seeded RNG and segment distance."
+    ],
+    "verified": "- **Screenshots:** every scene captured through tools/shot.mjs on the real Iris Xe (ANGLE gl-egl) and inspected with Read, iterating about 12 rounds. Fixed along the way: dark rings in the grass (canvas gradients fading to transparent black); eyes too low for a 56 degree camera; an invisible red tuft; helmets swallowing heads; the brute brow reading as a slab; an inward cliff hidden under the lip; a solid glow column on the Crown; self-occlusion in the King x-ray; a chevron that read as a square; a ghost stuck inside the castle; rampage aura turning lime; leopard-spot water.\n- **Mapping:** checkMapping() round-trip error over a 9x9 pixel grid is 6e-13 px. The mouse probe at (900,300) gives sim (24.75, 7.66), back to (900, 300.0). The 3D marker and DOM ring coincide with the cursor in /home/turbo/creative-game/shots/render-probe.png.\n- **Aspects:** 450x800 portrait and 1600x500 ultra-wide both letterbox with water.\n- **Motion:** two frames 250 ms apart show the King walking, the volley advancing and followers shuffling.\n- **Robustness:** loadMatch run 6 times plus colour-blind/quality/localTeam switches give no errors and no geometry growth (83 to 85). dispose() removes the canvas; the only warnings came from the lab loop still rendering after dispose.\n- **Checks:**\n  - `npx vitest run src/render`: 14/14 pass.\n  - `tsc --noEmit`: no errors in src/render; lab/render-lab.ts typechecked separately, clean.\n  - `npm run check` is not green, but only because of other engineers' in-progress files: sim mods/spawn/world/testing, ai tests, audio manifest, ui heroPick. None are in my paths.\n- **Server:** stopped (pkill \"[v]ite --port 5210\").\n- **Git:** the lead's WIP commit b9543fa already contains an intermediate snapshot of my render/lab/kit files. Still uncommitted from me: the island.ts water glints, licenses/art.md, and the package.json/package-lock devDependencies.",
+    "screenshots": [
+     "/home/turbo/creative-game/shots/render-opening.png",
+     "/home/turbo/creative-game/shots/render-midfight.png",
+     "/home/turbo/creative-game/shots/render-midfight-800x450.png",
+     "/home/turbo/creative-game/shots/render-crown.png",
+     "/home/turbo/creative-game/shots/render-mutants.png",
+     "/home/turbo/creative-game/shots/render-lineup.png",
+     "/home/turbo/creative-game/shots/render-lineup-kingsA.png",
+     "/home/turbo/creative-game/shots/render-lineup-kingsB.png",
+     "/home/turbo/creative-game/shots/render-lineup-critters.png",
+     "/home/turbo/creative-game/shots/render-lineup-buildings.png",
+     "/home/turbo/creative-game/shots/render-states.png",
+     "/home/turbo/creative-game/shots/render-stress.png",
+     "/home/turbo/creative-game/shots/render-midfight-cb.png",
+     "/home/turbo/creative-game/shots/render-probe.png",
+     "/home/turbo/creative-game/shots/robust-reload.png",
+     "/home/turbo/creative-game/shots/aspect-portrait.png",
+     "/home/turbo/creative-game/shots/aspect-wide.png"
+    ],
+    "looks_wrong_still": [
+     "Volley in flight: 12 critters at spread fractions read as a caterpillar of overlapping stretched blobs over the crowd. Height is only readable through the shrinking blob shadow. There is no trail or arc hint; stage 2 VFX should add one.",
+     "Finding the King at full-arena scale works via the light ring, chevron and x-ray, but his body is often buried in his own followers. At 800x450 he is about 20 px and the HP bar about 8 px tall.",
+     "Red critters seen from behind show their high-set eyes as white blobs on top, which reads like white hair.",
+     "At full-arena scale the critter kinds separate mostly by size (runt, brute) and the black bomb. The brute brow is a dark smear, the guard helmet a tiny grey dot. A slowed Blue critter (frost tint) is close to a Blue runt (lighter blue), and a stunned Red is close to a Red runt.",
+     "The Crown well, once owned, is a big block of team-coloured gable roof. In the Crown phase its capture ring plus the outer hold ring make a busy double ring under a crowd.",
+     "The Throne castle is dark grey stone with many small cones; at full view it reads as a grey pile with coloured caps. Flags (0.85 x 0.52 units) are about 12 px, so the swallow-tail vs triangle cue is weak at a glance; the ring colour carries ownership.",
+     "Neutral parchment roofs are close in value to the KayKit cream walls, so neutral houses look a bit washed out. They are clearly not Blue or Red, but not striking either.",
+     "The near cliff is still only a thin band at 56 degrees; the island reads slightly like a flat slab from the front edge.",
+     "Turrets are small at full-arena view.",
+     "The contested ghost ring's stripes painted across critter bodies look a bit like a cage.",
+     "Critter blob shadows are faint. Critters do not receive real shadows from buildings (receiveShadow on, but they sit in shadow rarely).",
+     "Performance under load: stress p95 spikes to 4.3-7.9 ms while the machine had a load average of 4-5 from parallel test runs. The median is under the 4 ms target, but the p95 is not proven on an idle machine. There are 305k triangles (castles at 5.7k each, KayKit tree clumps), and the rim tree count could be trimmed.",
+     "Hero.aim is a unit vector only, so the reticle distance comes from the mouse pointer the renderer tracks itself. With gamepad aim it sits at 60% of range (see contract requests).",
+     "onEvents is a no-op (stage 2): no hatch puff, capture pop, throw or landing splats, hit flashes or shake yet. The shake and reduceFlash options are stored but unused."
+    ],
+    "contract_requests": [
+     "Let the renderer import src/sim/tuning.ts (render depending on sim is allowed by the architecture). Right now src/render/mapping.ts and kings.ts mirror tuning numbers because the brief allowed type imports only: CAPTURE_MARGIN 0.55, CROWN_HOLD 10, THROW_RANGE 8.25 and hero respawnTime 5. They will drift if tuning changes.",
+     "Hero should expose aim distance (e.g. aimDist, or the raw clamped aim point) so the reticle is correct for gamepad and bots, not only for a mouse the renderer happens to see. The alternative is a Renderer.setAimPoint(x, y) method.",
+     "Document in the contract that worldToScreen returns CSS px relative to the canvas top-left, while screenToWorld takes client (viewport) coordinates. That is how it is implemented.",
+     "Renderer extras outside the contract, lab/QA only: debugView({x, y, width} | null) for close-up cameras and showcase(entries) for extra Kings driven by fixture Heroes. They are typed as RendererDebug and returned by createRenderer; the game can ignore them.",
+     "types.ts changed mid-task: new Hero, Critter, Zone and TeamMods fields plus World.born. The lab fixtures were updated to match. Any further contract changes will need the same fixture update in lab/render-lab.ts.",
+     "Consider adding npm scripts for the asset pipeline, e.g. \"assets:models\": \"bash tools/assets/fetch-kaykit.sh && node tools/assets/build-models.mjs\" (package.json scripts are shared, so not added)."
+    ],
+    "perf": "Bench is window.__lab.bench(n): render() wall time with gl.finish() each frame, 1280x720, DPR 1, headless Chromium on Iris Xe (ANGLE gl-egl), stress scene with 200 live critters, 2 Kings and 13 buildings.\n- **Final:** median 2.7-3.0 ms, p95 4.3-7.9 ms, 117 draw calls, 305k triangles. The machine load average was 4-5 from parallel sim/ai test runs, so p95 is noisy.\n- **Before optimisation:** median 3.1-3.3 ms, p95 4.5-4.8 ms, 193 calls, 353k triangles.\n- **What moved it:**\n  - Static shadow map (re-rendered only on load or quality change): about 1.5 ms per frame; in the same run it measured 3.3 to 1.8 ms. Later runs under heavier load gave medians around 2.7-3.0 ms.\n  - Merging each King's rigid parts by material, merging the reticle, and hiding ghost rings when unoccupied: 137 to 117 calls.\n- **CPU profile:** three.js traversal and draw submission dominate. Critter update is about 6% and the nearest-enemy search about 3.5%.\n- **Allocations:** the hot path has no per-frame allocations (TeamPalette Color objects, typed arrays, preallocated matrices).",
+    "asset_notes": "- **Evaluation:** the KayKit Medieval Hexagon pack passed a fair try in our scene and is kept for buildings and nature; I did not fall back to procedural buildings. It sits well with the toon gradient and the hard-faceted versus soft-blob split in ART.md.\n- **Shipped size:** /home/turbo/creative-game/public/models/kit.glb is 263,468 bytes (257.3 KB) for all buildings and nature, under the 400 KB target. It holds one GLB and one 256 px PNG atlas (was 1024 px, 15.8 KB).\n- **Contents (16 models):** castle 5659 tris, home_A 1011, home_B 1393, tower_A 2138 (two meshes), well 726, tree_A 50, tree_B 220, trees_A 432, trees_B 660, rock_A-E 18-71, lily 68, reeds 66.\n- **Team colours:** only the blue variants ship. The red variants are read at build time to bake the _TEAM vertex mask (837/8868 vertices on the castle, 288/1540 on home_A, and so on), so one model per building serves neutral, blue, red and colour-blind with no extra bytes.\n- **Source:** github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0, commit 84fa4e9 (2024-04-26), CC0. Downloaded 2026-09-30 into assets-src/ (gitignored, 39 MB).\n- **Rebuild:** `bash tools/assets/fetch-kaykit.sh && node tools/assets/build-models.mjs`. It is deterministic: identical md5 on re-run.\n- **Procedural:** Kings, critters, the crown, flags, bushes, tufts, flowers, turrets, zones, island, cliff and water are generated in code.\n- **Not used from the pack:** KayKit flags (I needed the swallow-tail vs triangle shape cue) and the scaffold/stage models (parchment roof plus no flag already reads as neutral)."
+   }
+  },
+  {
+   "label": "render:critique-1",
+   "phase": "Critique 1",
+   "status": "done",
+   "result": {
+    "verdict": "This first pass reads as a toy, not programmer art. The palette hangs together, the blobs have charm, the camera and lens give a real miniature feel, and team colours are clear from across the room. It is still a notch below Clash Royale or Thronefall for three reasons.\n\n1. There is no physical diorama base. The island is a flat green card on flat blue water, and the dirt cliff edge that ART.md asks for is missing.\n2. The Crown has no focal point. The centre building is just a slightly bigger hut with a small gold burr floating over it.\n3. In a crowd you cannot tell unit kinds apart. Every critter is the same sphere with a 6\u20139 px hat, and thrown critters merge into one blue caterpillar instead of reading as airborne.\n\nOn sizing, I measured units by cropping render-midfight.png, which is 1280x720, then scaled to 1080p:\n\n| Unit | Measured at 1080p | Spec at 1080p | Gap |\n|---|---|---|---|\n| Critter | about 28 px | 35 px (1/55 of the width) | about 20% under |\n| King | about 55 px | about 70 px | about 20% under |\n| Runt | about 19 px | 22 px minimum | under the floor |\n| Bomb and guard helmet | about 9 px | \u2014 | too small to carry kind identity |\n\nReadability questions:\n\n- **Your King:** yes, but only because of the chevron.\n- **Rival King:** barely.\n- **Blue vs Red:** instantly, and the colour-blind mode works.\n- **Owned vs neutral:** yes, owned buildings are clear.\n- **Contested:** only with effort.\n- **Critter kinds:** no.\n- **Thrown critters:** weakly.\n\nThe four changes that would raise perceived quality most:\n\n1. Add a thick earth and cliff skirt with a shoreline foam band.\n2. Give critter kinds distinct silhouettes and bring units up to the spec sizes.\n3. Make the Crown a gold hero prop in the centre of the map.\n4. Add a warm afternoon grade, with less saturated grass and cool-tinted shadows, so units sit clearly above the ground in value.",
+    "issues": [
+     {
+      "severity": "must-fix",
+      "where": "All full-map shots (render-opening/midfight/crown/stress) \u2014 island perimeter; render-lineup-critters bottom edge (y\u2248600-640)",
+      "problem": "There is no dirt or cliff edge. The grass ends in a thin lighter-green lip and then drops straight into flat water. Without a visible earth thickness the island reads as a green rectangle printed on blue, not as a toy you could pick up. This is the biggest thing missing from the 'toy battlefield on a table' brief.",
+      "direction": "Add a tall faceted earth skirt below the grass lip, about 18\u201330 px visible at 720p along the bottom and front edges. Use cliff #8A6A45 with 2\u20133 strata bands and a darker #6B4526 base, and roll the grass over the edge with a slight overhang. Put a pale shallow-water ring and a soft animated foam line where cliff meets water, then fade to deep #1D3F5E further out. See the Thronefall and Bad North island bases."
+     },
+     {
+      "severity": "must-fix",
+      "where": "render-crown.png centre (640,290) and render-lineup-buildings 'crown neutral/blue/red' (y\u2248380-470)",
+      "problem": "The Crown objective, the thing the whole match turns on, is a standard hut rotated 45\u00b0. A small spiky gold blob floats above it that reads as a sun, a virus or a pollen ball, not a crown. Its ground ring is layered red, blue and gold arcs that turn to mud. Nothing makes it the focal point of the map.",
+      "direction": "Build a dedicated Crown prop: a stone plinth or dais with a large faceted gold crown mesh about 1.5\u00d7 a King's size, slowly rotating and bobbing. Give it a warm light pool on the ground and, once the Crown opens, a soft god-ray or sparkle column. Use one clean gold ring with the capture progress as a pie fill in team colour, not stacked concentric arcs. It should be the first thing the eye lands on in render-opening."
+     },
+     {
+      "severity": "must-fix",
+      "where": "render-midfight.png and render-stress.png crowds (600-760, 330-520); render-lineup-critters row (y\u2248330-410)",
+      "problem": "Critter kinds differ only by tiny head accessories: a 6 px black bomb, a grey helmet cap, or a slightly larger body for the brute. In a crowd at game scale, critter, guard and bomber are indistinguishable, and the runt, at about 19 px at 1080p, falls under the 22 px floor. Everything is a sphere, so silhouettes do none of the work.",
+      "direction": "Give each kind its own body shape, not a hat. Brute: squat and wide, 1.4\u00d7 size, with a heavy brow or horns. Runt: a small teardrop with oversized eyes, but at least 24 px at 1080p. Bomber: carries the bomb as a large lit shape on its back with a visible spark. Guard: holds a flat shield plate out front, a strong rectangle in the silhouette. Then scale the base critter up to the 1/55-of-width spec. Test by rendering silhouettes only (fill black): kinds must still be tellable."
+     },
+     {
+      "severity": "must-fix",
+      "where": "render-midfight.png stream from the player King to the centre hut (590-720, 340-400); render-stress.png same area; render-mutants 'lobbed volley' (650-760, 400-430)",
+      "problem": "In-flight critters overlap into a continuous blue caterpillar. Their shadows are faint and sit almost under them, so there is no sense of height, and you cannot see the swarm gun firing, which is pillar 5 ('juicy toy').",
+      "direction": "Exaggerate arc apex height in presentation, stretch bodies along velocity (volume preserved), tuck the eyes into a squint, and draw a crisp dark contact-shadow dot that shrinks and fades with altitude. Keep that shadow clearly separated from the body. A faint 3\u20134 frame motion smear or a puff at launch and on landing would sell the hose."
+     },
+     {
+      "severity": "must-fix",
+      "where": "render-midfight.png player King (660,410) and rival King (860,270); render-opening rival King (940,235)",
+      "problem": "The player King is findable only through the small pale chevron. Its body is a paler blue than the critters and gets swallowed by the swarm. The rival King has no marker at all and is a pale-pink blob, or a black donut when wearing Sable's hat, inside a clump of reds. The spec says 'you always know where your King is'.",
+      "direction": "Render Kings at the spec size of 2\u00d7 a critter. Keep them at full team saturation with a thicker outline, since pale reads as a different faction. Give them visible capes as the GDD says. Make the player marker larger, white with an ink outline, and bobbing. Add a bold team-colour ground ring under both Kings that draws above critter shadows, and a slim ringed crown icon over the rival King. Consider a see-through silhouette when critters occlude the King."
+     },
+     {
+      "severity": "must-fix",
+      "where": "aspect-portrait.png",
+      "problem": "At 450x800 the island is a strip about 420 px wide in the middle of a blue screen. Critters are about 5 px and the King about 10 px, so it is unplayable and looks broken.",
+      "direction": "Decide on a portrait policy now. Either use a rotated or tighter portrait camera that fits the island's width, or show a clear 'rotate your device' parchment card. Do not letterbox a 16:9 island into portrait."
+     },
+     {
+      "severity": "should-fix",
+      "where": "render-midfight/stress crowds (e.g. stress crop around 480-700, 300-520)",
+      "problem": "Critters facing away from the camera show their eyes as hard white slivers on the top edge. A crowd becomes a field of white flecks and crescents, which is noise and looks like broken outlines. The eyes are the personality budget, yet from behind they read as artefacts.",
+      "direction": "Bias eye placement toward the camera by about 20\u201330\u00b0 so pupils stay visible, or clamp gaze yaw so the eyes never go fully to the back of the body. Hide the eye whites entirely when facing away rather than showing a sliver."
+     },
+     {
+      "severity": "should-fix",
+      "where": "render-opening.png: all 12 neutral buildings",
+      "problem": "The neutral capture rings are thick dark grey donuts. Twelve of them are the heaviest, darkest shapes on the map and pull the eye away from the units. They read as holes or pits rather than 'unowned'.",
+      "direction": "Make neutral rings thinner and lighter: neutral #D9CFB4 cream or a light ink at about 50% opacity, perhaps dashed. Keep the solid, saturated thick rings for owned buildings so ownership outranks neutrality visually."
+     },
+     {
+      "severity": "should-fix",
+      "where": "render-midfight.png centre hut (595-640, 320-380): black/white striped arc; render-lineup crown rings",
+      "problem": "The contested state is drawn as black-and-white hazard tape, which reads as 'construction barrier' and is off-palette. Contested capture shown as stacked red and blue arcs is hard to parse.",
+      "direction": "Draw contested as a single ring split into two team-colour pie fills that push against each other, with a pulsing white seam or a small crossed-swords pip. Drop the monochrome stripes."
+     },
+     {
+      "severity": "should-fix",
+      "where": "All full-map shots: overall grade; render-states grass",
+      "problem": "The lighting reads as cool, flat midday, not afternoon sun. The grass is as saturated as the team colours, so the ground competes with the units. Shadows are neutral dark green-grey. The large cloud-shadow mottles in render-states and the lineups look like dirt on the grass.",
+      "direction": "Warm the key light (slight gold), give shadows and ambient a cool blue-violet tint, and pull grass saturation down 10\u201315% while keeping its value mid. Team bodies should be the most saturated things on screen after gold. Soften or remove the big ground mottles, or make them clearly hand-placed lighter and darker grass patches."
+     },
+     {
+      "severity": "should-fix",
+      "where": "render-opening bottom edge (100-1180, 580-620), left edge trees (10-60, 520-600), right edge (\u22481222, 550-580)",
+      "problem": "The edge dressing looks procedural. A row of evenly spaced identical round bushes forms a hedge along the bottom. Flat grey pentagon 'rocks' look like placeholders. Pines on the left overhang into the water past the island edge. There is a stray thin dark vertical line at the right edge near x\u22481222, y\u2248550\u2013580 that looks like an artefact.",
+      "direction": "Cluster the foliage in groups of 2 to 5 with varied sizes and gaps. Make rocks faceted 3D stones in varied sizes, with some half-buried. Keep trees on land, or put them on the new cliff lip. Find and remove the vertical line."
+     },
+     {
+      "severity": "should-fix",
+      "where": "render-opening and render-midfight: large dashed ellipse around the King; render-mutants 'stunned/slowed' (280-410, 420-440)",
+      "problem": "The swarm range ellipse spills into the water and off-frame, adding a big UI shape to every screenshot. Stunned and slowed critters are shown by desaturating the team colour to grey or lavender, which erodes the Blue/Red read exactly when combat is busiest.",
+      "direction": "Clip the range indicator to land, fade it when not aiming, or reduce it to a short arc facing the aim. Show status as an overlay that keeps the team hue: orbiting stars for stun, a frost-crust shell in #9FE8FF for slow."
+     },
+     {
+      "severity": "should-fix",
+      "where": "render-mutants: scorch (765-850, 300-370), vortex (900-1005, 290-380), turrets (740-850, 205-240)",
+      "problem": "The scorch reads as a brown dirt hole, not fire. The vortex is a pale crop circle that reads as passive ground decal. The turrets are tiny signboards on sticks, well under readable size.",
+      "direction": "Scorch: charred centre with glowing #FF8A3D embers and a flicker. Vortex: animated inward-spiralling bands with a faint tint and debris particles. Turrets: a chunky squat body at least critter size, with a team-colour top and a readable barrel pointing at its target."
+     },
+     {
+      "severity": "nice",
+      "where": "render-opening huts (e.g. 400-440, 160-230)",
+      "problem": "The chimney is a big dark cylinder that dominates each hut's silhouette and reads as a cannon or pillar. At game scale the roof colour is the only ownership cue on the building itself. Flags are about 10 px, too small to carry the swallowtail vs triangle colour-blind cue.",
+      "direction": "Shrink or lighten the chimneys, make the roof mass larger (it carries team colour), and enlarge the flags about 1.5\u00d7 with a clearer silhouette difference."
+     },
+     {
+      "severity": "nice",
+      "where": "render-lineup-critters bombers (790-960, 320-350); render-lineup crown icons",
+      "problem": "The bomber's fuse spark is a gold diamond, but ART.md reserves gold for crowns, the Crown, rewards and buttons.",
+      "direction": "Make the spark #FF8A3D orange or white-hot."
+     },
+     {
+      "severity": "nice",
+      "where": "render-states 'dead (ghost at throne)' (1140-1270, 30-60 and 50-120 near both thrones)",
+      "problem": "The ghost King is a faint pale disc with a crown that is hard to find. The label sits under empty space.",
+      "direction": "Give the ghost a clear translucent King silhouette above the Throne with a respawn countdown ring, and gentle bobbing."
+     },
+     {
+      "severity": "nice",
+      "where": "All maps: single-pixel white, pink and yellow flower specks and dark grass-tuft triangles",
+      "problem": "At 720p and 1080p these read as dust, dead pixels or stray particles and compete with real hit effects.",
+      "direction": "Replace them with fewer, larger flower clusters of 4\u20136 px blossoms, or remove them. Keep the ground quiet so particles read."
+     },
+     {
+      "severity": "nice",
+      "where": "Throne models (render-opening 185-280, 410-510)",
+      "problem": "The Throne is a cluster of many small cones and turrets, a busy silhouette that fights its own team ring.",
+      "direction": "Simplify to one dominant keep with 2 flanking turrets and a big flag. Fewer, bigger shapes read better at this scale."
+     }
+    ],
+    "keep": [
+     "Fixed, tilted, narrow-lens camera. It already gives a miniature, whole-arena-in-frame feel, and the 16:9 and ultra-wide framing (aspect-wide.png) letterboxes gracefully into water.",
+     "Blue round-top vs Red flame tuft body shapes. At game scale the red teardrops read clearly as a different team even without colour. Keep and strengthen them.",
+     "The colour-blind mode in render-midfight-cb.png and robust-reload.png. Orange vs blue plus dashed orange capture rings is clear and handsome.",
+     "Dark team-tinted inverted-hull outlines on critters and Kings. Crowds hold together as coherent masses over grass.",
+     "Big white eyes with dark pupils. The Kings in the lineup closeups (brawler, gorm, brood's multi-eyes, bumble's sleepy eyes) are genuinely charming and characterful.",
+     "Owned buildings: the full roof recolour plus a thick saturated team ring is instantly readable (render-crown.png left and right halves).",
+     "Faceted gold crowns on Kings. Gold is reserved, and the crowns read as crowns.",
+     "Sun from the upper left with building shadows falling lower right, anchoring the props.",
+     "Point-symmetric path network forming an X/diamond. The composition is balanced, with the player base at bottom-left and the rival at top-right.",
+     "Low-poly dark pine clusters and tan dirt paths with pebbles. Cohesive, appealing materials.",
+     "State readability on Kings in render-states: stun stars, shield bubble, rampage orange glow, and the hurt HP bar all read.",
+     "The player chevron marker as a concept. Make it bigger rather than replacing it.",
+     "Thin reticle-style aim marker as a concept (render-midfight at 820,425). Just give it more contrast with an ink outline."
+    ]
+   }
+  },
+  {
+   "label": "render:feel",
+   "phase": "Feel",
+   "status": "interrupted",
+   "digest": "design/handoff/inflight/render-feel.md"
+  }
+ ]
+}

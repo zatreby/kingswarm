@@ -1,0 +1,46 @@
+{
+ "workflow": "kingswarm-community-voices",
+ "script": "design/handoff/workflows/kingswarm-community-voices.js",
+ "stages": [
+  {
+   "label": "community:players",
+   "phase": "Research",
+   "status": "done",
+   "result": {
+    "file": "/home/turbo/creative-game/design/research/community-players.md",
+    "summary": "I pulled 10,048 English Steam reviews from 16 comparable games and keyword-coded 7,194 of them, the last two years plus all dates for four small games. Steam reviews were the only data source. Reddit was blocked (403, login wall, 429), so it is UNVERIFIED and has no data. Hacker News is used only as a cross-check.\n\nEvery quote in the file (about 60) was machine-checked as an exact substring of its review, and every quote links to its Steam review.\n\nThe file leads with 12 recommendations, each tagged AGREES, DISAGREES or NEW against the existing research and the GDD. Evidence by theme follows, then GDD changes, then disagreements. The counts below are keyword counts unless marked hand-counted.\n\nMain findings:\n- **Run length:** the ceiling players state is 15 to 20 minutes. Halls of Torment's 30-minute runs draw 31 hand-counted length complaints in 506 reviews, and reviewers name 15 to 20 minutes as the target. The GDD's 12 to 15 minutes is safe.\n- **Drafts:** \"one more run\" language appears in 17% of survivors-like positives and is driven by build variety. The threat is \"false choices\" (no real decision to make).\n- **Content threshold:** small games are punished for repeated opponents, maps or enemies (about 100 reviews) more than for a small pick count. 20 Minutes Till Dawn has 12 to 13 characters, 11 weapons and 24 runes and still drew content complaints. Rounds has 69 cards, yet a reviewer says \"you saw already all possible perks\" after about 30 minutes.\n- **Price:** a 5-hour game is forgiven at $3 to 5. At $15 (Bad North) price is a top negative. Abandonment is worse still: 41% of recent 20 Minutes Till Dawn negatives.\n- **Versus:** Tooth and Tail negatives are 18% about the AI or campaign, and 31 reviews mention AI cheating or unfair asymmetry. Rounds players complain about a missing CPU opponent, several-minute queues and mods needed for more players or a continue button.\n- **Brotato Nightmare backlash:** negatives rose from 3% in April 2026 to 12% on 13 to 31 May, after a difficulty tier that changed the base game.\n- **Thronefall boss:** 15% of its negatives mention the boss or ending (\"every strategy you've come up with becomes irrelevant\").\n- **Swarm control:** 35% of Necrosmith negatives and 32% of The Unliving negatives are about unit AI and command. Wild at Heart negatives also cite being unable to move while throwing.\n- **First hour:** 32 to 49% of negatives on Bad North, Tooth and Tail, Just King and The Unliving are written at 2 hours or less, against 14 to 25% for survivors-likes.\n- **Minimum content for $5 to 10 (my inference from the above):** at least 5 distinct opponents or places, at least 30 build pieces, an escalating ladder plus a completion list, and a finished feel. The GDD's 6 rivals and 22 Mutations plus 3 heroes (31 pieces) clear this, but only as a floor.",
+    "gdd_changes_argued": [
+     "Add a Continue-run save after every battle and draft (persist hero, Mutations, lives and next rival locally). Halls players rage about crashes near minute 25 of a 30-minute run, and Bad North multi-hour runs are criticised.",
+     "\u00a78 Versus: make best-of-3 a host choice of 3 or 5, allow a rematch that keeps the draft, and keep Duo Mutations and Brutes off in Versus until bot sims show no combo above about 60% win rate. Rounds players complain about the round cap and about combo snowball.",
+     "\u00a74 and \u00a76: keep 22 Mutations as the floor rather than the goal. Add bot-sim pick-rate gates (flag a Mutation picked more than about 60% or under about 5% when offered) and budget a second layout or variant per rival for Crown Levels 4 to 8, since opponent and place variety is where small games get punished.",
+     "\u00a77.5 unlocks: each of the first 10 unlocks must change a decision, not a number or a skin. Show unlock progress on the end screen. Crown Levels stay opt-in and tactic-additive, never stat inflation, and are bot-tested so at least 3 Mutation builds still win at Crown 8.",
+     "\u00a76 Boss and rivals: verify each rival and King Mora can be beaten by at least 3 different draft archetypes, and put their counters and tells on the rival card. Thronefall's build-invalidating boss is a top quit reason.",
+     "\u00a73.2 and \u00a73.3: garrisoned, holding and returning critters get a visible state icon or colour, and the King fires while moving at full speed with no root. Unit-AI and command complaints dominate the commander genre, and Wild at Heart is criticised for rooting the player while throwing.",
+     "\u00a77.7 Assist stays opt-in and off by default, because Vampire Crawlers is criticised for being too easy (27 of 200 negatives).",
+     "Distribution and scope: launch at or under $5 (or free on web) as a complete 1.0 with no roadmap promises. Abandonment is the biggest negative theme in small games.",
+     "Versus modes: ship a non-cheating vs-AI with the couch mode, and make online invite-link only with no matchmaking queue."
+    ],
+    "disagreements_with_existing_research": [
+     "genre-teardown.md #7 proposes 15-25 minute runs, which is at or above the 15-20 minute ceiling players state (Halls of Torment 30-minute complaints). The GDD's 12-15 minutes is safer.",
+     "genre-teardown.md #8 says Tooth and Tail's problem is 'bigger army always wins'. The community's larger complaints are that the AI breaks the commander's own rules (31 of 666 reviews) and that the single cursor cannot split attention (27 negatives, 9%).",
+     "retention.md #9 (Hades-style assist) is sound in principle, but the newest survivors-like is criticised for being too easy (Vampire Crawlers), so the assist must stay opt-in.",
+     "retention.md holds up Brotato's difficulty ladder as a model. Players show the top rung can backfire: the May 2026 Nightmare update pushed negatives from 3% to 12% because it changed the base game.",
+     "GDD \u00a78 fixes Versus at best of 3. Rounds reviewers complain about the 5-round cap and about not being able to continue or customise, so make the length a host option.",
+     "retention.md #1 and the GDD imply the pick count is the content lever. Reviewers punish repeated opponents, maps and enemies more than a small pick count, and Rounds' 69 cards still felt 'seen it all' in about 30 minutes."
+    ]
+   }
+  },
+  {
+   "label": "community:devs",
+   "phase": "Research",
+   "status": "interrupted",
+   "digest": "design/handoff/inflight/community-devs.md"
+  },
+  {
+   "label": "community:webtech",
+   "phase": "Research",
+   "status": "interrupted",
+   "digest": "design/handoff/inflight/community-webtech.md"
+  }
+ ]
+}

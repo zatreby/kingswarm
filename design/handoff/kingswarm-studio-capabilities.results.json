@@ -1,0 +1,154 @@
+{
+ "workflow": "kingswarm-studio-capabilities",
+ "script": "design/handoff/workflows/kingswarm-studio-capabilities.js",
+ "stages": [
+  {
+   "label": "studio:ai-engineer",
+   "phase": "Research",
+   "status": "done",
+   "result": {
+    "file": "/home/turbo/creative-game/design/research/studio-ai-engineer.md",
+    "summary": "The findings file is written (94 lines). I scanned about 300 @aiDotEngineer uploads from Jul-Sep 2026 and read 17 talks. I could not read raw transcripts because YouTube captions returned HTTP 429 from this IP. Talk content therefore comes from each talk's ai.engineer summary page plus the YouTube description and chapters. Those summaries were small-model generated and garbled at least one model name, so I validated every actionable claim against primary sources. Matt Pocock's talk had no summary page, so only its description was read. The file has 10 tagged recommendations, a talk table, per-talk findings, a validation table, a playbook, and a NEEDS OWNER list. No talk covered Higgsfield, 3D asset generation or AI art pipelines. Only adjacent titles (Moonlake world models, NYT mobile games) were seen and not read. Most talk model names are already superseded. Recorded speaker claims that could not be checked (Anthropic latency numbers, Parameter Golf, ZS speedup, Warp's \"GLM for UI\", Voss's IFScale rerun) are marked UNVERIFIED. The file's edit was the only change I made. Other modified files in the working tree are from other agents.",
+    "adopt_now": [
+     "Independent verifier, never self-grading: use `/goal` with a measurable condition plus a turn cap, a Stop hook running `npm run check`, and a fresh-context subagent reviewer. The `/goal` evaluator only sees the transcript, so agents must paste evidence.",
+     "Append-only `design/WORKLOG.md` that a fresh agent resumes from, enforced by a repo-local commit hook (Reddit pattern).",
+     "Enforce rules structurally rather than in prose: PreToolUse hook in the repo's `.claude/settings.json` for lead-only paths (`kingswarm.html`, `build.sh`, `docs/`, `src/sim/types.ts`), keeping `purity.test.ts` as the sim-purity gate. Agents route around advisory guards.",
+     "Run a harness ablation this week, since Opus 5.5 (Sep 22) and Sonnet 5.5 (Sep 28) just shipped. Remove rules, hooks and gates that no longer change outcomes (Anthropic: every harness component encodes an assumption about model limits).",
+     "One owner per coherent feature; handoffs through files (GDD, ART, `types.ts`), not chains of specialist agents; deterministic checks before LLM judgment (ZS lesson).",
+     "Write a 4-criterion Kingswarm taste rubric (swarm readability, ART.md palette fidelity, game-feel numbers, 5 MB budget). Keep defect checks separate from taste checks, with critique by a fresh subagent and human final say.",
+     "Pin no model that has a retirement date and check the deprecations page monthly. Haiku 4.5 is 'not sooner than Oct 15, 2026' and Sonnet 4.5 (20250929) 'not sooner than Sep 29, 2026'. `/goal` evaluators default to Haiku (override with ANTHROPIC_DEFAULT_HAIKU_MODEL)."
+    ],
+    "needs_owner": [
+     "A spend ceiling (tokens or dollars per session or day) for unattended runs. I can enforce turn caps but not choose the number.",
+     "Only if the owner wants to try Managed Agents dreaming or outcomes: an ANTHROPIC_API_KEY plus a request through https://claude.com/form/claude-managed-agents (dreaming is a research preview, access by request). Recommendation: skip, nothing else depends on it.",
+     "Nothing else needs a login, payment or account. All ADOPT NOW items are repo-local."
+    ],
+    "try_later": [
+     "Route models by a small measured log (task class, model, effort, pass/fail, cost) and revisit after about 30 entries (Warp's evals-based routing; the 'GLM for UI' claim is anecdote).",
+     "Scripted bot-vs-bot headless playthrough as the next verification rung after `npm run check` and `tools/shot.mjs`, failing on NaN, no kills or timeouts.",
+     "Periodic offline memory and skill audit (a poor man's dreaming) that writes a new file for review instead of editing in place; try `/doctor prompt-audit` (v2.1.283) on CLAUDE.md.",
+     "One-open-unit-per-loop backpressure and a per-task evidence bundle (check output, PNG, diff stat) as a review kit.",
+     "Evaluate ast-grep as a deterministic sensor for migration-style loops only if a repo-local install is wanted."
+    ]
+   }
+  },
+  {
+   "label": "studio:ahmed-nagdy",
+   "phase": "Research",
+   "status": "done",
+   "result": {
+    "file": "/home/turbo/creative-game/design/research/studio-ahmed-nagdy.md",
+    "summary": "Channel identified as @NagdyWP (Ahmed Nagdy, 44.3K subscribers, id UCV5-PB2LLRn0v3LZ5Rqu2Xw). I pulled Arabic auto-captions with yt-dlp for 12 recent videos (2026-06 to 2026-09-29) and checked each actionable claim against primary sources. Anthropic docs and announcements confirmed the Sonnet 5.5, Opus 5.5 and Fable 5.1 claims. OpenAI API pricing, Gemini and GLM pricing, and the GitHub repos were also checked. The Claude Code workflows and routines docs confirmed the workflow claims and the scheduled-job pattern. Outdated items found: Gemini 3.7 Flash is superseded by 3.8 Flash; his 100-agent workflow runs predate the size-guideline default; Haiku 5.5 is announced but not shipped. Unverified items: Higgsfield pricing (gated behind signup), OpenAI's $500 plan, Ultrafast mode and plan-limit cut (openai.com returned 403), and his per-task dollar figures. The WebSearch budget ran out early, so identity rests on yt-dlp metadata and one search. He covers no game design and no 3D-model generation, and most videos carry referral links or his own products. Only the one research file was written; no installs.",
+    "adopt_now": [
+     "Pin routing to the confirmed lineup and set effort explicitly on every agent: Opus 5.5 at medium as the heavy worker, Sonnet 5.5 at high (xhigh only for hard tasks, never max), Fable 5.1 at medium for planning. Haiku stays 4.5 until Haiku 5.5 ships.",
+     "Give sibling workflow agents identical model, effort, tools and cwd so they share a prompt-cache prefix. Keep one long session per task. Cache reads are $0.25/MTok on Fable 5.1 and $0.20 on Opus 5.5 and Sonnet 5.5.",
+     "Author is never the reviewer: use a different model tier and a fresh context for plan and diff review, as a workflow stage or the code-review skill.",
+     "Keep the mattpocock/skills pipeline (grill-with-docs, to-spec, to-tickets, implement, tdd). The installed plugin is missing to-spec, to-tickets, implement and teach, so refresh it at project scope.",
+     "Treat this channel as a release radar, not a source. Every claim goes through a primary-source check before it enters the studio rules."
+    ],
+    "needs_owner": [
+     "Higgsfield account and paid plan (only if we make trailer or key art), plus the browser login for the connector. Pricing is unverified; he quotes $9 to $59 per month. Then the lead adds it in-repo with `claude mcp add --scope project --transport http higgsfield https://mcp.higgsfield.ai/mcp`. Confirm commercial-use terms for generated media first.",
+     "For Routines (a weekly staleness-watch job): a claude.ai subscription login in the CLI (not an API key), the Claude GitHub App on the repo, and acceptance that routines draw on plan limits.",
+     "A second-vendor CLI subscription (Codex, Grok or GLM) plus its login, only if the owner wants Delegate Skills or cross-vendor review. Not needed now.",
+     "Decision on plugin scope: updating mattpocock-skills touches ~/.claude, which the brief forbids. Either the owner approves it or the lead vendors the skills into the repo."
+    ],
+    "try_later": [
+     "Higgsfield MCP for marketing assets only (trailer, key art, logo sting), never shipped game assets given the 5 MB no-external-requests budget.",
+     "A Claude Code Routine (research preview) as a weekly staleness watcher that opens claude/ branch PRs against design/research. No auto-merge into the live build.",
+     "guard-skills (clean-code-guard, test-guard): MIT, 1.3k stars, works with Vitest. Read the SKILL.md files first and install at project scope only.",
+     "Delegate Skills cross-CLI fleet (2.3k stars, MIT, 20+ CLIs): revisit only if a second vendor subscription is added. Some supported CLIs have no read-only mode."
+    ]
+   }
+  },
+  {
+   "label": "studio:higgsfield",
+   "phase": "Research",
+   "status": "done",
+   "result": {
+    "file": "/home/turbo/creative-game/design/research/studio-higgsfield.md",
+    "summary": "Higgsfield (Sep 2026) is an aggregator of image, video, audio and 3D models plus its own Soul (photoreal portrait) models. Programmatic access is real, but only the REST API and SDK work without a paid plan: a separate USD balance with a $5 minimum. The CLI and MCP need a paid plan and OAuth login, and they draw on plan credits. Per-model API prices and plan prices were not retrievable and are marked UNVERIFIED. Web terms (dated 2026-09-12) say you own outputs and commercial use is unrestricted on all plans; whether that covers API output is UNVERIFIED. Recommendation: keep gameplay art procedural or CC0. Use AI only for key art and the store capsule, made image-to-image from an in-engine render, with a possible short video sting later. Steam requires disclosing AI content, including marketing art. Skip Soul, 3D, MCP and local models. The report includes a wiring plan around `@higgsfield/client` and a spend-capped, provenance-logging `tools/art-gen.mjs`. WebSearch quota ran out mid-task, so peer-tool coverage (fal, OpenAI, BFL) is thinner than Higgsfield's; the OpenAI per-image price was not found.",
+    "adopt_now": [
+     "Keep every gameplay-facing visual procedural or CC0 in-engine. This includes rival portrait busts rendered from 3D models. AI is limited to key art, the store capsule and a trailer sting.",
+     "Make key art image-to-image from an in-engine render (`node tools/shot.mjs`) using GPT Image 2.5 or Nano Banana Pro. Set the logo and type in-engine or SVG afterward.",
+     "Use the Higgsfield REST API and TS SDK (`@higgsfield/client` 0.2.6) with a $5 balance and no subscription, rather than the CLI or MCP.",
+     "Give the wrapper script a per-job cost estimate, a hard spend cap, immediate download (outputs are kept only 7 days), and a provenance log for Steam AI disclosure.",
+     "Before any secret exists, add `.env.local` and `assets-src/gen/` to `.gitignore`. Another agent had already modified `.gitignore` at the time of writing, so re-check its current contents first."
+    ],
+    "needs_owner": [
+     "Create a Higgsfield API account at open.higgsfield.ai, register payment, fund $5 (the minimum), create an API key ID and secret, and put `HF_CREDENTIALS=<id>:<secret>` in `/home/turbo/creative-game/.env.local`. The delimiter format is UNVERIFIED.",
+     "Read the API/Developer Terms and confirm the web terms (own outputs, commercial use, no training on outputs, Higgsfield trains on your content unless Enterprise) also cover API output.",
+     "Accept that AI-generated marketing art requires the Steam AI-disclosure at release.",
+     "Optional: a Google AI Studio key (`GEMINI_API_KEY`) if stills should go direct to Nano Banana Pro. Also optional: read plan prices in the pricing UI only if a CLI or MCP subscription is ever wanted."
+    ],
+    "try_later": [
+     "Seedance 2.5 image-to-video sting (3-5 s) from the key art, using Draft Mode 480p to pick a take, then 1080p. Gate on a small spike because low-poly geometry may melt.",
+     "Recraft V4.1 palette-locked spot illustrations, since it documents RGB palette control that fits the ART.md hex table.",
+     "AI expression sheet for rival portraits from the 3D bust render, using Nano Banana Pro character references (up to 5)."
+    ]
+   }
+  },
+  {
+   "label": "studio:ai-3d",
+   "phase": "Research",
+   "status": "done",
+   "result": {
+    "file": "/home/turbo/creative-game/design/research/studio-ai-3d.md",
+    "summary": "Recommended pipeline: KayKit CC0 hero bodies plus code-built headgear, critters and VFX, all through one shared toon material, optimized with gltf-transform and checked with headless turntable renders. Estimated 3D total is 1.6-2.0 MB. Paid AI text-to-3D and local generators are skipped for v1. WebSearch quota ran out mid-session, so Tripo, Sloyd and Rodin details are thin, and no AI-3D output quality was actually seen.\n\nMeasured here today:\n- **bpy on Arch:** the pip `bpy` 5.2.2 wheel installs and runs, but only on Python 3.13 exactly. System Python is 3.14, so it needs a uv-managed 3.13. That means a 402 MB wheel, a 958 MB venv and about 9 minutes to install. A script did Decimate, Geometry Nodes group creation, auto-weights and glTF export. Draco and meshopt export are missing from the wheel, so compress with gltf-transform afterwards.\n- **Optimizer:** gltf-transform 4.5.1 took KayKit Knight.glb from 3.66 MB to 285 KB (6 clips kept, meshopt, 256 px WebP). Animation clips were about 85% of the bytes.\n- **QA loop:** a headless Chromium turntable rendered 8 angles into a 1024x512 PNG in 1.1 s on the Iris Xe and 1.8 s on SwiftShader.\n\nFrom primary sources, AI 3D services:\n- **Meshy:** Smart Topology caps at 15k triangles, auto-rig is humanoid-only, the API needs a paid plan, and free output is CC BY 4.0.\n- **Rodin:** API only on the $120/month Business tier.\n\nFrom primary sources, local generators:\n- **TRELLIS.2:** needs an NVIDIA GPU with 24 GB or more.\n- **Hunyuan3D 2.1:** needs 10-29 GB VRAM, and its license excludes the EU, UK and South Korea.\n- Nothing in that class runs on this laptop.\n\nFlag for the lead: audio is the bigger budget risk. `assets-audio.md` sizes music at about 5 MB, which alone hits the 5 MB cap.",
+    "adopt_now": [
+     "One pipeline: KayKit Adventurers/Skeletons bodies for 3 Kings and 6 rival variants, with per-rival crown/hat/cape built in code and palette tint (about 1.4 MB for 5 bodies)",
+     "Critters, extra props, VFX meshes and ownership rings generated in code at load time (0 KB shipped), one InstancedMesh per kind",
+     "Extend tools/assets/build-models.mjs with a clip-strip step (keep about 6-8 clips per hero) and use gltf-transform meshopt + WebP as the only optimizer",
+     "Copy the turntable script into tools/assets/turntable.mjs and require one 8-angle contact sheet per new or changed mesh, with Idle applied, tri count and a 22 px readability render",
+     "Keep the existing kit.glb _TEAM-mask tint approach for the 4 buildings x 3 ownership states",
+     "Lead should trim or lazy-load the roughly 5 MB of music to keep the initial download under 5 MB"
+    ],
+    "needs_owner": [
+     "Nothing is required for the recommended pipeline",
+     "Optional, only for AI-generated one-off props: a Meshy Pro plan (API access needs Pro; price not confirmed) plus an API key from meshy.ai/settings/api as MESHY_API_KEY, or meshy auth login (browser sign-in)",
+     "Optional and not recommended: Tripo or Hyper3D Rodin API keys (Rodin API needs the $120/month Business tier), or a Mixamo Adobe login",
+     "Decision: is a roughly 1 GB bpy venv acceptable on this 7 GB RAM laptop if Blender work is ever needed? No action until then"
+    ],
+    "try_later": [
+     "Headless Blender via bpy 5.2.2 for booleans, bevels, auto-weights and Geometry Nodes on hero accessories, only if code cannot do it (uv venv --python 3.13 inside the repo dir, gitignored). Fallback: the 383 MB portable Blender 5.2.2 tarball",
+     "three-bvh-csg 0.0.18 or manifold-3d 3.5.4 for build-time booleans on buildings (never shipped)",
+     "Sharing one animation-only GLB across the four Adventurers rigs to save about 140 KB per body; bone-name match is UNVERIFIED",
+     "meshy-cli (official, MIT) for a single hero prop if the owner buys a plan"
+    ]
+   }
+  },
+  {
+   "label": "studio:ai-audio",
+   "phase": "Research",
+   "status": "done",
+   "result": {
+    "file": "/home/turbo/creative-game/design/research/studio-ai-audio.md",
+    "summary": "Wrote the audio research file. Everything ran in the scratchpad and nothing was installed in the repo.\n\n- **Verification pipeline:** an objective audio gate built on ffmpeg, numpy, scipy and pyloudnorm. It caught real defects in both library and generated sounds. The file lists the thresholds and the gotchas I hit.\n- **Semantic check:** local CLAP (int8 ONNX, no torch) works as a reject and rank filter. It reliably separates beeps and garbage from foley, but confuses \"wooden pop\" with \"cartoon boing\" and \"hand clap\", so it cannot be an accept test.\n- **AI generation:** Stable Audio 3 small-sfx (May 2026) runs on this CPU. Its optimized Hugging Face repo downloads without a login, but the license needs registration, and I only ran the int8 model because RAM was short. Four of seven prompts gave a valid one-shot, and the two 1.5 s prompts failed. Music generation and loop quality from SA3 were not run (scratchpad quota), so they are unverified.\n- **Encoding:** 42 short sound effects took 171 KB as Opus 64 kbps mono, against 273 KB as Vorbis q3. Headless Chromium decoded Vorbis, Opus, AAC and MP3 to exactly the source sample count, so loop points can come from the manifest. Safari and Firefox were not tested.\n- **Budget:** the derived total is about 0.9 MB per client against the 1.5 MB target.\n- **Skipped or unverified:**\n  - Suno, Udio, MusicGen and AudioGen are skipped: litigation, download caps, copyright, or non-commercial weights.\n  - ElevenLabs Music and Google Lyria licensing could not be confirmed.\n  - The game-loudness standards pages returned 403, so the loudness targets are studio-chosen.\n- **Claude and audio:** Claude models take no audio input.\n- **Session note:** the WebSearch budget (200) was already spent, so this used WebFetch, the Hugging Face and PyPI APIs, and runs on the laptop.",
+    "adopt_now": [
+     "Keep CC0 human-made audio as the shipping base; use AI only to fill gaps (critter squeaks, wood pops, Crown percussion layer)",
+     "Objective audio gate on every asset and again on the shipped file: 2-pass loudnorm to -18 LUFS for music, padded ebur128 loudness for one-shots, true peak <= -1 dBTP, DC offset, clipping, lead/tail silence, attack/decay, loop seam ratio < 0.5",
+     "Encode SFX as Opus 64 kbps mono and music as Opus 48-64 kbps stereo, with AAC .m4a only as a fallback chosen by canPlayType; individual files, no audio sprites",
+     "Local CLAP (int8 ONNX, no torch) as a reject/rank filter, never an accept test",
+     "Chromium decodeAudioData test in the existing Playwright setup to assert sample counts and loop seams",
+     "Treat BPM and key as prompt/loop-length contracts; do not rely on librosa detection (117.5 for a true 120)",
+     "Scheduled one-shots on the loop's beat grid for the Crown percussion layer instead of generating a second stem",
+     "One 5-minute owner listening pass on a concatenated contact reel at the M1 gate"
+    ],
+    "needs_owner": [
+     "Register at https://stability.ai/community-license before shipping any Stable Audio 3 output (company name, confirm revenue under US$1M); add 'Powered by Stability AI' on the about/credits page and keep the NOTICE",
+     "ElevenLabs paid Starter+ plan and API key (outside the repo) only if the SFX API is needed; the free plan is non-commercial",
+     "Google AI Studio API key only if the optional Gemini audio second opinion is wanted; free-tier data may be used to improve Google products",
+     "Real Safari (iPhone and Mac) and Firefox check of Opus/AAC decoding and loop seams, because their Playwright builds would install globally",
+     "One human listening pass of the contact reel and a decision on the Steam AI-content disclosure",
+     "Optional: free 3 GB or more of RAM, or approve an overnight fp32-DiT SA3 run; only the int8 DiT fit here"
+    ],
+    "try_later": [
+     "Stable Audio 3 small-sfx (local, CPU, free) for gap sounds after license registration and with the fp32 DiT",
+     "Stable Audio 3 small-music for stingers and loops (not run here, unverified)",
+     "ElevenLabs SFX API with loop flag if the Stable Audio 3 hit rate is poor",
+     "Gemini 3.8 Flash as a second-opinion audio judge (accuracy unverified)",
+     "ACE-Step 1.5 (MIT, Feb 2026) for music; CPU speed and output rights unverified"
+    ]
+   }
+  }
+ ]
+}

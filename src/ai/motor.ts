@@ -25,6 +25,10 @@ export interface Directive {
   goal: { x: number; y: number } | null;
   /** Never hold a reserve (all-in plays). */
   allIn: boolean;
+  /** Just committed to an announced action: no escape dashes or blinks away from it. */
+  steady?: boolean;
+  /** A play has promised the Ability (Sable's ambush Blink): the motor must not spend it. */
+  keepAbility?: boolean;
 }
 
 /** Chances resampled at every decision: a person does not use every tool every time. */
@@ -129,6 +133,20 @@ export class Motor {
   private rim(ctx: Ctx, bi: number): number {
     const b = ctx.w.buildings[bi];
     return b.r * tuning.building.solidFrac + tuning.hero.radius + RIM_PAD;
+  }
+
+  /** The nearest spot to (x, y) where a King can stand, searching outward in rings. */
+  freeNear(w: World, x: number, y: number): [number, number] {
+    if (!this.nav) this.nav = new NavGrid(w);
+    if (this.nav.isFree(x, y)) return [x, y];
+    for (let r = 0.25; r <= 3; r += 0.25) {
+      for (let k = 0; k < 16; k++) {
+        const a = (k / 16) * Math.PI * 2;
+        const px = x + Math.cos(a) * r, py = y + Math.sin(a) * r;
+        if (this.nav.isFree(px, py)) return [px, py];
+      }
+    }
+    return [x, y];
   }
 
   /** A free point `r` from building bi, as close as possible to the direction of (fx, fy). */
@@ -356,7 +374,7 @@ export class Motor {
 
     // escape / close the gap
     if (rolls.dash && me.dashCd <= 0) {
-      if (hpLow && foeNear) {
+      if (hpLow && foeNear && !d.steady) {
         const t = w.buildings[ctx.ownThrone];
         const l = Math.hypot(t.x - me.x, t.y - me.y) || 1;
         return { button: 'dash', x: (t.x - me.x) / l, y: (t.y - me.y) / l };
@@ -391,7 +409,7 @@ export class Motor {
     const { me, view, w } = ctx;
     const it = d.intent;
     const foeOk = view.foe.alive && !view.foe.invuln;
-    const ready0 = me.cd[0] <= 0 && rolls.ability;
+    const ready0 = me.cd[0] <= 0 && rolls.ability && !d.keepAbility;
     const ready1 = me.cd[1] <= 0 && rolls.ult;
     const pressing = view.pressing.n;
     const fighting = pressing > 2 || (view.foe.alive && ctx.foeDist < 8)
@@ -411,7 +429,7 @@ export class Motor {
           if (dist(me.x, me.y, px, py) < b.vortex.range - 0.2) return { button: 'ultimate', x: px, y: py };
         }
         if (ready0) {
-          if (ctx.hpFrac < 0.35 && view.foe.alive && ctx.foeDist < 6) {
+          if (ctx.hpFrac < 0.35 && view.foe.alive && ctx.foeDist < 6 && !d.steady) {
             const t = w.buildings[ctx.ownThrone];
             const pt = this.blinkPoint(ctx, t.x, t.y);
             if (pt) return { button: 'ability', x: pt[0], y: pt[1] };

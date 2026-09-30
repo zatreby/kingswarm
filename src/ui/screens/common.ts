@@ -1,5 +1,6 @@
 import { HEROES, MUTATIONS } from '../catalog';
-import { btn, h, icon, pic } from '../dom';
+import { btn, h, icon, mutationBadge, pic } from '../dom';
+import { shortName } from '../format';
 import { heroIcon, mutationIcon, picto, tagIcon } from '../icons';
 import type { Device, MutationId, NavAction, Settings, UnlockView } from '../types';
 
@@ -33,6 +34,13 @@ export interface ScreenInst {
   destroy?: () => void;
 }
 
+/** Build as one row of icon badges (name in the tooltip and aria-label): fits any build on one line. */
+export function buildIcons(build: MutationId[]): HTMLElement {
+  const row = h('ul', { class: 'build-icons', 'aria-label': 'Your build' });
+  for (const id of build) row.append(h('li', null, mutationBadge(id, { size: 'md', tipSide: 'down' })));
+  return row;
+}
+
 /** Compact build row: hero pictogram + Mutation icons, each with name under. */
 export function buildRow(build: MutationId[] | null, heroId: keyof typeof HEROES | null): HTMLElement {
   const row = h('ul', { class: 'build-row', 'aria-label': 'Your build' });
@@ -53,7 +61,7 @@ export function unlockCards(list: UnlockView[]): HTMLElement {
     else if (u.kind === 'hero' && u.hero) art = heroIcon(u.hero);
     else if (u.kind === 'crownLevel') art = picto('crown');
     else if (u.kind === 'rival') art = tagIcon('king');
-    const kind = { mutation: 'New Mutation', hero: 'New hero', crownLevel: 'Crown Level', rival: 'Rival variant' }[u.kind];
+    const kind = { mutation: 'New Mutation', hero: 'New hero', crownLevel: 'New level', rival: 'New rival' }[u.kind];
     wrap.append(h('li', { class: `unlock unlock-${u.kind}`, style: `--i:${i}` },
       h('span', { class: 'unlock-kind' }, kind),
       icon(art, 'unlock-ic'),
@@ -73,7 +81,7 @@ export function ladder(names: string[], beaten: number, lostAt = -1): HTMLElemen
     const mark = state === 'done' ? picto('check') : state === 'lost' ? picto('cross') : boss ? picto('crown') : '';
     ol.append(h('li', { class: `pip pip-${state}${boss ? ' pip-boss' : ''}`, 'aria-label': `${name}: ${state === 'done' ? 'beaten' : state === 'lost' ? 'lost here' : 'not reached'}` },
       h('span', { class: 'pip-dot', html: mark || `<span>${i + 1}</span>` }),
-      h('span', { class: 'pip-name' }, state === 'todo' && !boss ? '?' : name)));
+      h('span', { class: 'pip-name', title: name }, state === 'todo' && !boss ? '?' : shortName(name))));
   });
   return ol;
 }

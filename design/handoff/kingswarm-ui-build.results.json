@@ -1,0 +1,249 @@
+{
+ "workflow": "kingswarm-ui-build",
+ "script": "design/handoff/workflows/kingswarm-ui-build.js",
+ "stages": [
+  {
+   "label": "ui:build",
+   "phase": "Build",
+   "status": "done",
+   "result": {
+    "built": [
+     "src/ui/types.ts: the full UI contract. ScreenModel is a union of 13 members (boot, title, heroPick, rivalCard, pause, settings, result, draft, runOver, runWon, codex, howto, none). Also defines HudStatic, HudFrame (flat numeric fields, meant to be mutated in place), HintPrompt, Bark, Settings with DEFAULT_SETTINGS, RivalView/TraitView/UnlockView/Codex*View, the Ui and Hud interfaces, and newHudFrame(). Only types (HeroId, MutationId, Team) are imported from src/sim/types.ts.",
+     "src/ui/index.ts: createUi(root). It handles show/diff-free rebuild, same-screen update() for boot progress, ui.nav with spatial focus, keyboard handling, confirm dialogs (content behind them goes inert), toasts, setDevice (swaps glyphs everywhere through [data-verb] slots), setScale, applySettings, destroy. A ResizeObserver switches on a .compact layout when the scaled reference canvas is shorter than 660 px. It re-exports the catalogue and the formatters.",
+     "src/ui/hud.ts + hud.css: the in-battle HUD from onboarding-ux section 2. Top centre: timer pill (pulses and swaps hourglass for an alarm clock under 0:30), two-sided Crown bar (hidden until the Crown opens; the red side also has stripes), state chips for Frenzy, Rampage and Overtime, and a one-line message. Top left: your building count and lives. Top right: rival portrait, name and building count, two rival readiness chips, and a pause button. Swarm badge (with-you/cap plus '+N away'), hint prompt and 4 pooled bark bubbles are anchored by transform and can follow either King. Bottom left: Ultimate, Ability, Dash and Recall buttons with radial pie cooldowns, second counts, device glyphs and a ready pop; they act on pointerdown and never take focus. Owned-Mutation badges have hover/focus tooltips. There is a 'King fell, back in N' chip, and a touch layout that mirrors the buttons to the right thumb.",
+     "src/ui/screens/*.ts: boot (loading bar, then one big breathing gold Play), title (logo made of CSS text plus critter SVGs; Continue run with battle, hero and crowns; New run; Versus disabled with a 'Soon' tag; Codex; Settings; version), heroPick (3 cards with abilities and glyphs, locked card shows how to unlock, last hero preselected, Crown Level stepper with pips and a per-level perk line, Enter starts), rivalCard (VS medallion, red or boss band, portrait slot or silhouette, name, title, 2 trait chips, Mutation chips, your crowns, a draining timer, skippable by any key, click or accept), pause (Abandon asks for confirmation, safe choice focused), settings (custom styled sliders with a critter thumb, switches, segmented controls, Assist line, Reset progress with confirmation; sends the full Settings object on every change and applies scale, colour and flash settings live), result (win: Victory, rays, brag facts, Next; loss: Defeated, near-miss facts, a crown that cracks and falls, 'N Crowns left', one-time loss note, Rematch; small Menu link), draft (3 cards with tag band, big icon on a plate, name, sentence, tag chips; Duo cards get a split two-tag band, inner ring and 'Duo' seal; overshoot entry with stagger, hover/focus lift, pick animation then callback at 240 ms; 1/2/3 and R keys; reroll with count; Skip; your-build badges; 'Next' strip with portrait, traits and the rival's question; mountPreview hook per card), runOver (build, ladder pips, near-miss, unlock cards that flip in, one-time Assist offer, New run focused, Title link), runWon (confetti, rays, build, run time, Crown Level, unlocks), codex (tabs with counts. Mutations: grid with '?' silhouettes and hidden Duos that show only their two tag icons, plus a detail panel with pick count. Rivals: flaw locked until beaten, best result per hero and Crown Level. Heroes: stats), howto (3 core verbs with 8-word lines, plus a glyph table for keyboard+mouse, controller and touch, switchable).",
+     "src/ui/icons.ts: inline SVG built from simple shapes. 22 Mutation icons, 4 tag icons, 12 trait icons, 8 ability icons, a hero pictogram per hero (blob King with crown and a prop), a portrait silhouette, and pictograms: hut (blue/red/neutral), throne, tower, crown, broken crown, critter, heart, hourglass, alarm, lock, reroll, frenzy, flame, bolt, pause, play, check, cross, star, question and others. Rival red comes from a CSS variable, so colour-blind mode recolours the icons too.",
+     "src/ui/glyphs.ts: glyphs for every verb on keyboard+mouse (HTML keycaps, SVG mouse with the left/right button highlighted), gamepad (face buttons, bumpers, triggers, sticks, Start) and touch (stick, hold, drag, tap), plus spoken labels for aria and the controls table.",
+     "src/ui/catalog.ts: Mutation names, tags and sentences copied word for word from GDD section 4; tag names; hero names, playstyles and abilities from GDD section 5.",
+     "src/ui/format.ts, focus.ts, diff.ts + 3 Vitest specs (19 tests): clock/elapsed/cooldown formatting, spatial focus-grid navigation, and change-detection slots for HUD diffing.",
+     "src/ui/ui.css: palette tokens from ART.md as CSS custom properties, plus overrides for the orange and bold (high-contrast) colour modes. Also: parchment cards with ink outline, hard shadow, dashed inner stitch and 1-2 degree tilt; gold buttons with a dark bottom edge that compress on :active; a custom focus ring (blue with ink edges on both sides); styled range inputs, switches and segmented controls; animations that follow prefers-reduced-motion.",
+     "public/fonts/lilita-one.woff2 (12 KB, re-wrapped as WOFF2 only, not subset, so it keeps its Reserved Font Name legally), public/fonts/nunito-latin-var.woff2 (33 KB, Latin subset, variable weight 200-1000), the OFL texts next to them, licenses/fonts.md with sources, copyright, processing and the rebuild command. Raw TTFs are in assets-src/fonts (gitignored).",
+     "lab/ui.html + lab/ui-lab.ts: every screen via ?screen=<id> over shots/spike3.png, with the full rival roster from GDD section 6 (traits, questions, flaws), fake codex, run and HUD data, and callbacks wired as a clickable flow. Variants: device, scale, color, boot&loading=1, title&save=0, rivalCard&boss=1, hud&state=early|crown|ot|down, result&outcome=loss, draft&duo=0|rerolls=0|owned=0, codex&tab=, chrome=1 for a screen switcher. Includes a minimal Gamepad API poller that drives ui.nav."
+    ],
+    "api_summary": "import { createUi, newHudFrame, DEFAULT_SETTINGS, MUTATIONS, HEROES } from './ui';\nconst ui = createUi(rootEl)  // rootEl must be a positioned full-screen overlay; adds html.ks-ui-root (sets html font-size = 10 reference px)\nui.show(model: ScreenModel)  // discriminated on .screen; all callbacks are fields on the model; {screen:'none'} clears\n  boot{progress?, onPlay?} | title{continueRun?, version, onContinue?, onNewRun, onCodex, onSettings, onVersus?} |\n  heroPick{heroes:HeroCardView[], selected, crownLevel?{value,maxByHero,cap,perks?}, onPick(hero,cl), onBack} |\n  rivalCard{rival:RivalView, battle:{index,total,boss?}, lives, maxLives, durationMs?, onDone} |\n  pause{battle?, rivalName?, onResume,onRestart,onHowTo,onSettings,onAbandon} | settings{settings, onChange(Settings), onResetProgress, onBack} |\n  result{outcome:'win'|'loss', facts[], rivalName, battle, livesBefore, livesAfter, maxLives, lossNote?, onPrimary, onMenu} |\n  draft{options:MutationId[], rerolls, owned[], next:RivalView, nextBattle?, onPick(id), onReroll, onSkip, mountPreview?(id, slotEl)=>cleanup} |\n  runOver{hero, build[], ladder:string[], beaten, nearMiss, unlocks:UnlockView[], assistOffer?{onAccept}, onNewRun, onTitle} |\n  runWon{hero, build[], time, crownLevel, unlocks, onNewRun, onTitle} | codex{tab?, mutations, rivals, heroes, onBack} | howto{device?, onBack}\nui.hud.mount(HudStatic{hero, rival{name,hero,portrait?}, maxLives, lives, mutations[], crownHold, onAbility?,onUltimate?,onDash?,onRecall?,onPause?})\nui.hud.update(frame: HudFrame)   // every rAF; reuse one object from newHudFrame(); positions in CSS px relative to root; NaN hides/keeps\nui.hud.prompt({text, verb, anchor:'you'|'point', x?, y?} | null); ui.hud.message(text); ui.hud.bark({text,x,y,team}); ui.hud.setLives(n); ui.hud.unmount()\nui.toast(text, icon?: PictoId|MutationId); ui.nav('up'|'down'|'left'|'right'|'accept'|'back'); ui.setDevice('kbm'|'gamepad'|'touch'); ui.setScale(1|1.25|1.5)\nui.applySettings(Settings)  // scale + colour mode + reduced flashes; ui.device; ui.destroy()\nPortraitSource = HTMLCanvasElement (mounted live) | ImageBitmap (copied) | string URL.",
+    "verified": "- Vitest: `npx vitest run src/ui` passes 3 files and 19 tests (format, focus navigation, diff slots).\n- Typecheck: src/ui and lab/ui-lab.ts are clean under strict mode plus noUnusedLocals (checked with a temporary tsconfig in .cache). `npm run typecheck` still reports 12 errors, all in other engineers' in-progress src/ai tests; none in my files.\n- Screenshots, all taken with tools/shot.mjs (headless system Chromium on the real GPU) and looked at with Read:\n  - every screen at 800x450 and 1280x720;\n  - hud, draft, result (win and loss) and runOver at 1920x1080;\n  - variants: HUD early/crown/overtime, touch device + orange colour mode, 150% scale at 1280 and at 800; draft on gamepad at 125%; rival card boss version; boot loading state; hero pick with gamepad glyphs; codex rivals and heroes tabs; how-to on gamepad; the pause confirmation dialog; the toast after a pick.\n  - I iterated about 5 rounds. Fixes that came from looking at the shots: button fonts lost to a reset rule; the rival card button text was invisible; screens overflowed at 800x450 (now a JS-driven compact mode); HUD glyphs did not render on mount; the overtime timer kept its warning style; the Bite tag icon read as a funnel; the draft question mark; Long Arm icon; broken-crown art; the settings column did not line up.\n- Driven interaction (headless steps with logs):\n  - draft: right arrow moves focus to card 2, down reaches Reroll, up returns to the card, Enter plays the pick animation and moves on to rivalCard; the '3' key also picks;\n  - settings: right arrow on a slider goes 80 to 90 and its value readout updates; Enter on a switch flips aria-checked;\n  - pause: Abandon opens a confirmation focused on 'Keep playing'; Tab stays inside the dialog; Escape closes it and focus returns;\n  - title with gamepad: ui.nav down/down/right/accept opens settings with gamepad glyphs showing.\n- HUD diffing, measured with a MutationObserver:\n  - 120 identical update() calls produce 0 DOM mutations.\n  - 60 live frames (one second of timer, badge moving 2 px per frame, cooling ultimate) produce 60 transform writes, 6 pie updates, 1 timer text change and 1 cooldown digit change. There are no class churns and no layout reads in update().\n- Reduced motion: with prefers-reduced-motion set in Playwright, draft cards are fully visible at 60 ms; without it they are still hidden in their staggered entry.\n- Build size: a Vite build of lab/ui.html gives UI JS about 26 KB gz (including lab data) and CSS about 12 KB gz. Font url()s are rewritten to relative ../fonts/ paths, which works with base './'. Fonts add 45 KB. No external requests; the only 404 was a favicon, now silenced in the lab.\n- Machine limits (design/STUDIO.md): I checked free memory before starting (about 1.4-1.9 GB available). I kept one headless browser at a time and batched each viewport's captures into one browser session. The uv/fonttools cache and scratch files went to .cache/ on disk, not the RAM-backed /tmp. The vite dev server on 5240 was stopped at the end.",
+    "screenshots": [
+     "shots/ui/draft-1280.png",
+     "shots/ui/draft-800d.png",
+     "shots/ui/draft-1920.png",
+     "shots/ui/draft_device-gamepad_scale-1.25-1280b.png",
+     "shots/ui/int-draft-picking.png",
+     "shots/ui/hud-final.png",
+     "shots/ui/hud-800.png",
+     "shots/ui/hud-1920.png",
+     "shots/ui/hud_state-early-1280.png",
+     "shots/ui/hud_state-ot-1280.png",
+     "shots/ui/hud_scale-1.5-1280b.png",
+     "shots/ui/hud-scale15-800.png",
+     "shots/ui/hud_device-touch_color-orange-1280b.png",
+     "shots/ui/title-1280.png",
+     "shots/ui/title-nosave-1280.png",
+     "shots/ui/title-800d.png",
+     "shots/ui/boot-1280.png",
+     "shots/ui/boot-loading-800.png",
+     "shots/ui/heroPick-1280.png",
+     "shots/ui/heroPick-800.png",
+     "shots/ui/heroPick-gamepad-800.png",
+     "shots/ui/rivalCard-1280.png",
+     "shots/ui/rivalCard-boss-800.png",
+     "shots/ui/pause-1280.png",
+     "shots/ui/pause-confirm-800.png",
+     "shots/ui/settings-1280.png",
+     "shots/ui/settings-800d.png",
+     "shots/ui/result-1280.png",
+     "shots/ui/result-1920.png",
+     "shots/ui/result_outcome-loss-800.png",
+     "shots/ui/result_outcome-loss-1920.png",
+     "shots/ui/runOver-1280b.png",
+     "shots/ui/runOver-1920.png",
+     "shots/ui/runWon-800.png",
+     "shots/ui/codex-1280.png",
+     "shots/ui/codex_tab-rivals-1280.png",
+     "shots/ui/codex_tab-heroes-1280.png",
+     "shots/ui/codex-rivals-800.png",
+     "shots/ui/howto-800.png",
+     "shots/ui/howto_device-gamepad-1280.png",
+     "shots/ui/int-toast-after-pick.png"
+    ],
+    "looks_wrong_still": [
+     "HUD at 150% on 800x450 is crowded. The rival name is cut down to one letter and the Crown bar runs close to the rival ability chips. 150% at the smallest viewport is a stress case, but the top bar needs a narrow-mode rule (drop the name and keep only the portrait) instead of ellipsis.",
+     "HUD keycap badges sit over the lower third of the smaller buttons ('Shift' covers most of the Dash icon). A two-row 'key above icon' layout or a smaller Shift glyph (an arrow symbol) would read better.",
+     "The rival readiness chips (turret and rampart icons on dark pills) are hard to read at 800x450. They need brighter icons or a light plate.",
+     "Barks drawn near the top of the arena can cover the state chips and the message line (visible in the lab because Pip's anchor is high). The HUD does not dodge them; the integrator may want to clamp bark y below the top HUD band.",
+     "The confirm dialog sits over a busy pause card, and the 'Paused' title shows through the dimmer in a way that looks smudged. A stronger scrim or a blur would be cleaner.",
+     "Title logo: the crown floats off the 'K' instead of sitting on it, and the critter row plus the tagline pill are a bit tight under the wordmark.",
+     "The Long Arm and Rapid Fire icons are serviceable but plain next to Bombers and Cryo Bombs. Frostbite and Scorch could get the same eyes and personality.",
+     "How to play: the verb tiles have uneven heights, because the WASD cluster is taller than one glyph, so the three tiles do not quite line up.",
+     "The toast renders over the rival card's crown row when fired during a screen change. It might belong at the top edge when a screen is open.",
+     "The hero and codex portraits are placeholders (silhouette) until render supplies busts. The hero pictograms are icons, not renders.",
+     "Not checked: real touch input and a real gamepad (only simulated via ui.nav); Firefox and Safari (range styling uses -webkit and -moz pseudo-elements; the paint-order text outline may render differently in non-Chromium browsers); screen-reader pass beyond semantic roles and labels."
+    ],
+    "notes_for_integrator": "Contract and layering:\n- The UI imports only types from src/sim/types.ts.\n- Mutation and hero display text lives in src/ui/catalog.ts (verbatim from GDD sections 4-5), so models carry ids only. If design text moves elsewhere, point the catalogue at it.\n- Rival data (traits, questions, flaws) is currently lab fake data in lab/ui-lab.ts. The game layer should own the real roster and pass RivalView.\n- TraitIcon is a fixed union of 12; new traits need an icon added in icons.ts.\n\nSetup:\n- createUi adds class ks-ui-root to <html>, which sets the root font-size (1rem = 10 reference px). The ui root must be a full-size positioned overlay above the canvas.\n- HudFrame positions are CSS px relative to that root. Project world to screen in render and write them into the reused frame object.\n- Glyphs follow ui.setDevice: call it from the input layer on the last-used device.\n- The gamepad poller should map d-pad and stick to up/down/left/right, A to accept, B to back, and Start to pause (see the lab's pollPad).\n- In menus the UI listens to window keydown only while a screen is shown. In battle (screen 'none') it ignores keys, so the game owns them.\n\nConflicts I resolved:\n- (a) The brief says '5 rival pips + boss', but GDD section 6 says a run is 5 battles including the boss. The ladder is data-driven (names[]); the lab uses 5 with the boss last, matching 'Battle 2 of 5' in the brief.\n- (b) The colour-blind setting is a 3-way enum (default / orange per ART.md / bold high-contrast per onboarding-ux) rather than a boolean.\n- (c) Gold is used only for crowns, the Crown, primary buttons, rewards and Victory; the draft-pick highlight ring is gold because a pick is a reward moment.\n\nRequests:\n- Other layers should keep reduceFlashes and colorMode in sync with ui.applySettings.\n- Settings persistence (with the localStorage try/catch fallback) is not in the UI; onChange emits the full object.\n\nRelayed user request (learn the machine and its limits):\n- I followed design/STUDIO.md: checked free RAM before heavy steps, used at most one headless Chromium at a time, and kept downloads, the uv cache and scratch files on disk (assets-src/, .cache/) rather than the RAM-backed /tmp.\n- Free paths used: OFL fonts pulled from google/fonts, subset locally with uvx fonttools (no install, no account).\n- Font licensing: Lilita One was deliberately not subset, because its Reserved Font Name would make a subset a renamed Modified Version."
+   }
+  },
+  {
+   "label": "ui:critique",
+   "phase": "Critique",
+   "status": "done",
+   "result": {
+    "verdict": "Strong base; not ready to sign off. At 1280 and 1920 the menus look like a shipped game. The parchment cards, one gold primary per screen, focused-by-default Enter keycaps and small secondary links all match ART.md closely. The result and draft screens are close to Supercell quality in structure. Four regressions and clarity faults remain:\n\n1. At 800x450, compact mode smudges every parchment card title into an ink blob. The engineer said every screen was checked at 800x450, but this was missed.\n2. The broken-crown art reads as two crowns, so the lives display is wrong wherever it appears.\n3. The cooldown digits combine with the icon behind them to read as negative numbers (\"-11\", \"-1\").\n4. The top-centre HUD stack is up to 6 layers deep, and rival barks cover the state chips, including Overtime.\n\nThe draft is easy to scan but not yet exciting. Two of the three icons are near-identical bombs, the animated previews are not in place yet, and nothing ties the options to the next rival's question. One or two focused rounds should fix all of this. Evidence: shots/uicrit-*.png (all 13 screens at 1280, hud/draft/result at 800x450 and 1920x1080, plus 800x450 versions of every menu, HUD early/ot/down+touch, boss rival card and the late loss frame). The dev server on 5241 was stopped afterwards.",
+    "issues": [
+     {
+      "severity": "must-fix",
+      "screen": "pause, settings, codex, howto (every card-title) at 800x450 / compact",
+      "problem": "Card titles 'Paused', 'Settings', 'Codex' and 'How to play' render as illegible black smudges (shots/uicrit-pause-800.png, -settings-800.png, -codex-800.png, -howto-800.png). Cause: src/ui/ui.css:738 `.ks-ui.compact .display { -webkit-text-stroke-width: 1rem }` has the same specificity as `.card .display.card-title { -webkit-text-stroke: 0 }` (0,3,0) and comes later in the file, so it puts a 1rem ink stroke back on ink-coloured text.",
+      "direction": "In the compact block, line 739, add `-webkit-text-stroke-width: 0; text-shadow: none;` to the card-title rule, or scope line 738 to `.display:not(.card-title)`. Re-shoot every screen at 800x450 and look at each title."
+     },
+     {
+      "severity": "must-fix",
+      "screen": "result (loss), HUD lives, runOver/rivalCard crowns",
+      "problem": "The broken-crown pictogram is two tilted halves, and it reads as two crowns. The loss header shows two gold crowns above 'Defeated' even at 3.5 s (uicrit-result-loss-late.png). The in-card row next to '1 Crown left' reads as three crowns (one gold, two grey) for maxLives 2. The HUD top-left has the same problem. Lives are core information, and the icon contradicts the text.",
+      "direction": "Redraw brokenCrown as one crown silhouette with a jagged crack line and a missing chip, greyed as a single object. The loss header should show that single broken crown, not gold. Lives rows should read N gold plus M cracked, one glyph per life."
+     },
+     {
+      "severity": "must-fix",
+      "screen": "HUD ability buttons (all devices)",
+      "problem": "While an ability cools down, its digit is drawn over the dark icon silhouette. Kingscall's megaphone handle and the Recall icon sit next to the digit, so at 1280 and 800 the buttons read as '-11' and '-1' (uicrit-hud-early.png, uicrit-hud.png). The 'Shift' keycap also covers most of the Dash icon.",
+      "direction": "While cooling, dim the icon to about 25% opacity or hide it, and put the digit on a solid centred disc. Move the keycaps outside the disc, below or at the lower-right rim, so they never overlap the icon. Use an arrow glyph for Shift."
+     },
+     {
+      "severity": "must-fix",
+      "screen": "HUD top centre",
+      "problem": "Rival barks draw over HUD state. At 800x450 in overtime, the 'Overtime' chip is completely hidden by Pip's bark (uicrit-hud-ot-800.png). At 1280 and 1920 the bark cuts off 'The Crown is open!' and covers the Rampage chip. Overtime is exactly the state the player must not miss.",
+      "direction": "Keep barks out of the top HUD band: clamp the bark y below the band and flip the tail to point up when the King is high. Put the HUD chips on a higher z-layer than barks. Clamp the bark x away from the top-right rival cluster as well."
+     },
+     {
+      "severity": "must-fix",
+      "screen": "HUD top centre (800x450 especially)",
+      "problem": "The centre stack is timer, Crown bar, 'Hold the Crown 10 s', a row of Frenzy and Rampage chips, the message line, and the 'Your King fell' chip. At 800x450 it covers about 32% of the screen height and hides the upper-middle neutral huts and the approach to the Crown. The spec gives this area a timer pill with a one-line message.",
+      "direction": "Keep the persistent part to one row: timer plus Crown bar. Put the Frenzy, Rampage and Overtime state as small icon chips beside the timer pill, not on a new row. Show 'Hold the Crown 10 s' only for about 3 s when the Crown opens. Let the message line temporarily replace the chips instead of stacking under them. Anchor the 'King fell, back in N' chip over your Throne, where the King respawns."
+     },
+     {
+      "severity": "must-fix",
+      "screen": "runOver 800x450; codex 800x450; draft all sizes",
+      "problem": "runOver at 800x450 clips the 'Title' link at the bottom edge. At 800x450 the codex Mutations grid shows only 4 rows, and the last Duo slots are hidden with no scroll affordance. On draft, the Next strip and the Your build panel sit flush on the bottom edge at 800, 1280 and 1920, so their bottom corners look cut.",
+      "direction": "Give every screen a bottom safe gutter of at least 1.6rem. On runOver in compact mode, shrink the build/ladder block or place Title beside New run. In the codex, either fit all 22 cells (6 columns in compact) or add a visible scroll fade and a gamepad scroll indicator."
+     },
+     {
+      "severity": "must-fix",
+      "screen": "HUD and end screens at 800x450",
+      "problem": "Several texts are below the 12 px minimum at 800x450 that onboarding-ux sets. HUD 'Hold the Crown 10 s' is about 10 px. On runOver and runWon, the unlock details ('Now in the draft', 'Elite rematch after a loss'), ladder names and build labels are about 9-10 px. heroPick ability lines are about 11 px.",
+      "direction": "Enforce a 1.7rem minimum for any text node (at 7.2 px per rem that is 12 px). Where there is no room, cut words rather than shrink: unlock cards keep only the name, and ladder names show the rival portrait with the name on focus."
+     },
+     {
+      "severity": "should-fix",
+      "screen": "draft",
+      "problem": "Options are hard to tell apart at a glance. Bombers and Cryo Bombs use the same dark round bomb with eyes and differ only by a tiny fuse ornament. The bottom tag chips repeat the tag band. Text length varies from 4 lines (Bombers) to 2 (Long Arm), so the three cards have no common rhythm. The pick feels like reading, not like a reward.",
+      "direction": "Give each icon its own silhouette and dominant colour: Cryo Bombs as an ice-blue frosted bomb with crystals. Remove the bottom tag chips, since the band already says it, and use the space for the mountPreview loop. The lab should stub one so the excitement can actually be judged. Pin the name and text to the same baseline on all three cards. On pick, fly the card into the Your build slot bottom-left, with a gold burst."
+     },
+     {
+      "severity": "should-fix",
+      "screen": "draft (and GDD)",
+      "problem": "GDD \u00a74 promises that at least one option counters the next rival. The Next strip asks 'Can you thin out a flood?', but no card says it answers the question. That link is the most interesting part of the decision and teaches the rival system.",
+      "direction": "Add a small 'Good vs Mother Brood' ribbon (question-mark icon plus rival portrait) to the counter card(s), with the data supplied by the game layer. Keep it to 4 words or fewer."
+     },
+     {
+      "severity": "should-fix",
+      "screen": "draft / catalog (GDD copy)",
+      "problem": "Long Arm '+40% throw range and faster flight.', Rapid Fire 'You fire 60% faster\u2026' and Big Litter '+10 swarm cap\u2026' break GDD pillar 3 ('they never read \"+x%\"'). The UI copies them word for word, so this is a GDD text defect, not engineering.",
+      "direction": "Flag it to the design lead and rewrite as behaviour, e.g. 'Throw twice as far, and faster.' / 'Fire in a wide, fast spray.' / 'Bigger swarm. Start every battle full.' Then update catalog.ts."
+     },
+     {
+      "severity": "should-fix",
+      "screen": "rivalCard",
+      "problem": "The primary 'Fight!' button is dark navy with the keycap on the left. Every other primary is gold with the keycap on the right, so the one obvious action changes its look here. The card also does not show the battle's question ('Can you break a tower line?'), although GDD pillar 2 makes it the point of each rival. The lower-left of the card is empty.",
+      "direction": "Make Fight! the standard gold primary with the keycap on the right. Add the rival's question in italic under the Mutations row, in the empty space. Change 'MUTATIONS' and 'YOUR CROWNS' to sentence case (ART.md)."
+     },
+     {
+      "severity": "should-fix",
+      "screen": "HUD top right",
+      "problem": "The rival readiness chips are 28-40 px dark discs holding a dark turret or rampart icon, with a red '!' badge. They are unreadable at 800x450, and a 10-year-old would not know they mean 'rival Ultimate ready'. The HUD spec puts rival tells in the world.",
+      "direction": "Move the tell over the rival King as a world-anchored icon (as specced), or attach the readiness to the rival pill as a bright icon on a light plate that pulses when ready. Remove the separate floating discs."
+     },
+     {
+      "severity": "should-fix",
+      "screen": "HUD top left",
+      "problem": "The lives crowns float with no plate next to the building pill. They are small (about 20 px at 1280) and low-contrast over trees, and because of the broken-crown art they read as three crowns.",
+      "direction": "Put the lives inside the building pill (or in a matching pill) at 2.4rem or larger, using the fixed cracked-crown glyph."
+     },
+     {
+      "severity": "should-fix",
+      "screen": "icons (Kingscall, Rapid Fire)",
+      "problem": "Kingscall's megaphone reads as 'announcement' or a volume setting. Rapid Fire's three chevrons read as a media fast-forward control, not a game ability. Both look like app UI next to the character-driven bomb and critter icons.",
+      "direction": "Kingscall: a horn with small critters bursting out. Rapid Fire: a critter trailing speed lines, or a cluster of critters in flight. Give Frostbite and Scorch eyes and personality, like Bombers."
+     },
+     {
+      "severity": "should-fix",
+      "screen": "settings",
+      "problem": "The Assist help text is a 20-word, two-sentence paragraph (ART.md: no paragraphs in menus). 'Reset progress', a destructive action, sits under the Assist header. The switch Off state (beige knob on a white track) looks disabled. The title almost touches the 'Sound' header.",
+      "direction": "Cut the copy to 'Hatch faster after lost runs. Never locks anything.' Move Reset progress to a small footer link left of Done, keeping the confirmation. Give the Off track an ink-soft fill. Add about 1.2rem below the title."
+     },
+     {
+      "severity": "should-fix",
+      "screen": "result (win)",
+      "problem": "The primary label 'Next' is vague: the flow map says 'Next rival', and what actually follows is the draft. The 'Battle 2 of 5 \u00b7 vs Pip' subtitle sits bare over busy critters and the rival King, especially at 1920.",
+      "direction": "Label it for the reward: 'Choose a Mutation', or 'Next rival' if the draft is shown as part of it. Put the subtitle on a dark ribbon plate like the HUD pills."
+     },
+     {
+      "severity": "should-fix",
+      "screen": "runWon",
+      "problem": "The run's biggest moment is shown like a stats sheet. The build wraps with 'Second Wind' alone on row 2. The unlock card headers have different heights ('CROWN LEVEL' takes two lines), so the icons do not line up. A 'Crown Level 1' stat next to a 'Crown Level 2' unlock is confusing. The confetti and rays are sparse.",
+      "direction": "Put the hero pictogram, crowned and large, at the centre, with the title slamming in. Show the build as one row (smaller chips, or icons without labels). Use single-line unlock headers ('New level', 'New hero', 'New Mutation'). Drop the separate Crown Level stat. Double the confetti density for 1.5 s, subject to reduced-flashes."
+     },
+     {
+      "severity": "should-fix",
+      "screen": "howto",
+      "problem": "The three verb tiles repeat the table below (Move, Throw and Recall appear twice). Names are inconsistent: 'Throw' / 'Throw swarm' / Settings 'Fire button' / prompt 'Hold click'. The tiles have uneven heights. Some table rows echo the glyph in words and others do not.",
+      "direction": "Use one verb everywhere (for example 'Throw'), including Settings ('Throw button'). Remove the three core verbs from the table, or remove the tiles and keep one table. Give the glyph areas the same fixed height. Drop the text echoes, or give every row one consistently."
+     },
+     {
+      "severity": "should-fix",
+      "screen": "title",
+      "problem": "The 'Soon' tag covers the Versus label. A disabled Versus button is a dead end on the first screen a returning player sees. The logo crown floats off the K. The tagline pill overlaps the critter row.",
+      "direction": "Hide Versus until M3, or show it as a small locked icon row, not a full button. Seat the crown on the K. Add about 1rem between the critters and the tagline."
+     },
+     {
+      "severity": "nice",
+      "screen": "heroPick",
+      "problem": "Ability boxes have different heights across cards (Stomp's text wraps to 3 lines in a narrow column). The hero Blink and its ability Blink share a name (GDD).",
+      "direction": "Widen the ability text column (put the keycap under the icon) and set a minimum box height. Ask design to rename either the hero or the ability."
+     },
+     {
+      "severity": "nice",
+      "screen": "codex",
+      "problem": "The grid cell shown in the detail panel (Bombers) has no selected state. The '???' labels repeat the '?' icon.",
+      "direction": "Give the selected cell the blue focus ring (or a gold edge when discovered), and drop the '???' text."
+     },
+     {
+      "severity": "nice",
+      "screen": "global",
+      "problem": "ART.md asks for sentence case, but several labels are all caps: 'NEXT \u00b7 BATTLE 3 OF 5', 'YOUR BUILD', 'MUTATIONS', 'YOUR CROWNS', 'NEW HERO'. The VS medallion is gold, although gold is reserved for crowns, the Crown and rewards.",
+      "direction": "Use sentence-case mini-labels. Make the VS medallion red-team or ink."
+     }
+    ],
+    "keep": [
+     "Boot: one giant breathing gold Play over the live diorama, no menu. This is exactly the one-click FTUE the portals ask for.",
+     "The parchment card language (ink outline, hard shadow, dashed stitch, 1-2 degree tilt) and gold primary buttons with a pressed bottom edge. They are consistent across every screen and read as a game, not a web form.",
+     "One gold, pre-focused primary per screen with its Enter or device keycap, and secondary actions as small underlined links (Menu, Title, Skip, Back).",
+     "Result screens: one big near-miss headline fact, two supporting facts, '1 Crown left' plus the 7-word loss note, and Rematch. Textbook onboarding-ux section 3.",
+     "Draft structure: colour tag bands, 1/2/3 number keys, split Duo band plus Duo seal, reroll with count and R key, the Your build panel, and the Next strip with the rival portrait, traits and question.",
+     "Swarm badge anchored under the King with 'with you/cap | +N away'.",
+     "Timer pill that swaps its icon under 0:30, and the two-sided Crown bar with team pictograms and a striped red side (colour is not the only cue).",
+     "Hold-click prompt anchored at the King with a mouse glyph, 5 words.",
+     "Settings controls: critter-eye slider thumbs, segmented controls, live value readouts, 3-way colour mode, UI scale.",
+     "Pause: Resume focused and gold, Abandon in a danger tint behind a confirmation.",
+     "Codex: '?' silhouettes, Duo recipe hints shown as tag+tag, pick counts, a detail panel, and tab counts (11/22, 2/6, 2/3).",
+     "runOver ladder pips (check, cross, number, boss diamond) and the flip-in unlock cards; the Assist offer is one line with one button.",
+     "Device-aware glyphs everywhere, and the touch layout that mirrors the action buttons to the right thumb.",
+     "HUD diffing that makes zero DOM mutations when idle, and prefers-reduced-motion handling."
+    ]
+   }
+  },
+  {
+   "label": "ui:fix",
+   "phase": "Fix",
+   "status": "interrupted",
+   "digest": "design/handoff/inflight/ui-fix.md"
+  }
+ ]
+}

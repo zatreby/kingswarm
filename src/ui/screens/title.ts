@@ -17,11 +17,13 @@ export function logo(): HTMLElement {
         + `<circle cx="${x - 3.6}" cy="${y - 2}" r="3.3" fill="#fff" stroke-width="1.6"/><circle cx="${x + 3.6}" cy="${y - 2}" r="3.3" fill="#fff" stroke-width="1.6"/>`
         + `<circle cx="${x - 3.6 + look * 0.4}" cy="${y - 1.6}" r="1.7" fill="#1B2430" stroke="none"/><circle cx="${x + 3.6 + look * 0.4}" cy="${y - 1.6}" r="1.7" fill="#1B2430" stroke="none"/>`;
     }).join('') + `</g></svg>`;
+  // The crown sits on the K: both live in one tilted box so they stay together at every size.
   return h('div', { class: 'logo' },
-    h('span', { class: 'logo-crown', html: picto('crown') }),
-    h('h1', { class: 'display logo-word' }, 'Kingswarm'),
+    h('div', { class: 'logo-mark' },
+      h('span', { class: 'logo-crown', html: picto('crown'), 'aria-hidden': 'true' }),
+      h('h1', { class: 'display logo-word' }, 'Kingswarm')),
     h('span', { class: 'logo-critters', html: critters }),
-    h('p', { class: 'logo-tag' }, 'Your swarm is your gun.'));
+    h('p', { class: 'logo-tag ribbon' }, 'Your swarm is your gun.'));
 }
 
 export function titleScreen(m: TitleModel, _ctx: Ctx): ScreenInst {
@@ -36,11 +38,9 @@ export function titleScreen(m: TitleModel, _ctx: Ctx): ScreenInst {
   } else {
     menu.append(btn('New run', m.onNewRun, { kind: 'gold', size: 'lg', autofocus: true, cls: 'btn-block', verb: 'accept' }));
   }
-  const versus = btn('Versus', m.onVersus, { kind: 'plain', size: 'sm', disabled: !m.onVersus, cls: 'btn-versus nav-ok',
-    label: m.onVersus ? 'Versus' : 'Versus, coming soon' });
-  if (!m.onVersus) versus.append(h('span', { class: 'soon' }, 'Soon'));
+  // Versus stays hidden until it exists (M3): no dead ends on the first screen.
   menu.append(h('div', { class: 'title-row' },
-    versus,
+    m.onVersus ? btn('Versus', m.onVersus, { kind: 'plain', size: 'sm' }) : null,
     btn('Codex', m.onCodex, { kind: 'plain', size: 'sm' }),
     btn('Settings', m.onSettings, { kind: 'plain', size: 'sm' })));
   el.append(logo(), menu, h('p', { class: 'version' }, m.version));
