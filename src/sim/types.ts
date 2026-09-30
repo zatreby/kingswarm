@@ -80,6 +80,10 @@ export interface Hero {
   followers: number;
   /** Seconds until the next volley may leave. */
   fireCd: number;
+  /** Seconds until the next auto-swing check. */
+  swingCd: number;
+  /** Seconds until another 'noAmmo' event may be emitted (throttle). */
+  noAmmoT: number;
   /** Once-per-battle effects already spent (e.g. Second Wind). */
   spent: MutationId[];
   /** Buttons held last tick, for edge detection. */
@@ -193,6 +197,36 @@ export interface MatchConfig {
 export type Phase = 'open' | 'crown' | 'overtime' | 'over';
 export type WinReason = 'throne' | 'crown' | 'time' | 'overtime' | 'forfeit';
 
+/**
+ * Per-team rule modifiers, derived once in createWorld from TeamSetup (hatchMul, mutations).
+ * Systems read these instead of checking mutation ids, so a Mutation is a change to one derivation.
+ * With no mutations every field is its neutral value (1 for multipliers, 0 for additions).
+ */
+export interface TeamMods {
+  /** Hatch speed multiplier (TeamSetup.hatchMul x effects). */
+  hatchMul: number;
+  /** Multiplies the time between volleys (lower = faster). */
+  fireIntervalMul: number;
+  scatterMul: number;
+  throwRangeMul: number;
+  flightSpeedMul: number;
+  capAdd: number;
+  capMul: number;
+  startSwarmAdd: number;
+  critterHpMul: number;
+  critterSpeedMul: number;
+  biteMul: number;
+  garrisonBiteMul: number;
+  landDamageMul: number;
+  landKnockMul: number;
+  landRadiusMul: number;
+  /** Stun applied by a landing to enemy critters, seconds (0 = none). */
+  landStun: number;
+  /** Rate at which the dash cooldown recovers (1 = normal). */
+  dashCdRate: number;
+  rampageTimeMul: number;
+}
+
 export interface TeamStats {
   thrown: number;
   crittersKilled: number;
@@ -223,6 +257,10 @@ export interface World {
   zones: Zone[];
   obstacles: Obstacle[];
   stats: [TeamStats, TeamStats];
+  /** Rule modifiers per team, fixed for the match (see TeamMods). */
+  mods: [TeamMods, TeamMods];
+  /** Building index of each team's Throne. */
+  thrones: [number, number];
   /** Events produced by the most recent step. Cleared at the start of every step. */
   events: SimEvent[];
 }

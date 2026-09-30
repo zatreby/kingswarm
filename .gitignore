@@ -6,3 +6,4 @@ playwright-report/
 .cache/
 *.log
 shots/
+assets-src/

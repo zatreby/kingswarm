@@ -99,16 +99,20 @@ Three, each a playstyle. All share move/dash/fire/recall.
 
 Each rival = hero + signature Mutations + AI personality + arena layout + voice (barks shown as speech bubbles). The AI plays through the same input struct as a human, with human-like limits (reaction delay, aim error), so it can never cheat and bots double as testers.
 
-| # | Rival | Hero | Signature | Personality / the question it asks |
-|---|---|---|---|---|
-| 1 | **Bumble the Meek** | Brawler | none | Dawdles, forgets to recall. The tutorial: can you capture and fire? |
-| 2 | **Pip the Tinkerer** | Warden | Archer Huts; arena has Towers | Turtle. Can you siege: out-range, flank, bait the turret? |
-| 3 | **Mother Brood** | Brawler | Splitters, Big Litter | Floods the map. Do you have area damage and do you hold the Well? |
-| 4 | **Gorm the Glutton** | Brawler | Brutes | Rusher; marches on your Throne. Can you defend, kite and focus? |
-| 5 | **Queen Sable** | Blink | Homing, Frostbite | Assassin; hunts your King. Can you dodge and keep a guard? |
-| Boss | **King Mora the Crowned** | Warden | Royal Guard, Bombers, Second Wind | Two phases: turtles, then storms the Crown. Everything you learned. |
+| # | Rival | Hero | Mutations | Signature play → its tell | The flaw you exploit |
+|---|---|---|---|---|---|
+| 1 | **Bumble the Meek** | Brawler | none | Hoards until his swarm is full, then one slow blob push → a meter over his head fills | Predictable and slow: kite, split-fire, take his huts while he hoards. The tutorial rival. |
+| 2 | **Pip the Tinkerer** | Warden | Archer Huts; arena has Towers | Fortifies and waits, then one committed Crown push → lantern lit on his King shortly before | Never leaves his half early: win the economy, out-range his turret, bait it. |
+| 3 | **Mother Brood** | Brawler | Splitters, Big Litter | Floods every hut at once → her swarm fans out in visible streams | Spread thin: area damage and a held Well beat her; her King is lightly guarded. |
+| 4 | **Gorm the Glutton** | Brawler | Brutes | All-in march on your Throne → war-horn and banner before the wave | After the wave his base is empty for several seconds: counter-raid. |
+| 5 | **Queen Sable** | Blink | Homing, Frostbite | Feint one way, blink-ambush your King → a shimmer on the decoy, a mark where she will land | Splits her swarm, so each half is weak; dodge the ambush and she is exposed. |
+| Boss | **King Mora the Crowned** | Warden | Royal Guard, Bombers, Second Wind | Phase 1 turtles; at the Crown opening he storms it with everything → the sky darkens, horn | Second Wind is one-time; break the Guard first; two lives of pressure. |
 
-A run = 5 battles: rivals 1–4 in rising order (after the first clear, order and arenas vary) then the Boss. Battle length ramps: Crown opens at 0:45 of a 1:45 battle for the first rival, up to 1:30 of 2:30 for the Boss.
+Rival rules (from `design/research/fun-ai.md`): utility-scored intents with a personality weight row; every consequential decision gets a **tell** 0.6–1.5 s ahead (longer at low Crown Levels) and a short bark bubble; a rival never acts without a tell, never kills from off-screen, never gets hidden stat boosts. Difficulty = unlocked tactics + smaller execution errors (reaction time, aim error); an economy handicap only softens the first two rivals of a first run. A rival card before each battle shows the portrait, two trait icons and the Mutations, so knowledge carries across runs.
+
+A run = 5 battles: Bumble first, then three of {Pip, Brood, Gorm, Sable} in rising difficulty (order and arenas vary between runs), then the Boss. Battle length ramps: Crown opens at 0:45 of a 1:45 battle for the first rival, up to 1:30 of 2:30 for the Boss.
+
+Out of scope for 1.0 (strong ideas, parked): neutral monster camps, a mid-battle boss creature, hut types that hatch different critters, seeded daily run.
 
 ## 7. The run (Conquest)
 
