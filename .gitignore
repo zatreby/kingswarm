@@ -1,1 +1,8 @@
 kingswarm-v0*.html
+node_modules/
+dist/
+test-results/
+playwright-report/
+.cache/
+*.log
+shots/
