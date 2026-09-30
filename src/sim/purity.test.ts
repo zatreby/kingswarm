@@ -27,7 +27,7 @@ const BANNED: [RegExp, string][] = [
   [/\bsetTimeout\b|\bsetInterval\b|\brequestAnimationFrame\b/, 'timers'],
 ];
 // Implementation-approximated maths (ECMAScript lets engines differ): only math.ts may touch them.
-const APPROX = /Math\.(sin|cos|tan|asin|acos|atan|atan2|exp|expm1|log|log2|log10|pow|hypot|sinh|cosh|tanh|cbrt)\b|\*\*/;
+const APPROX = /Math\.(sin|cos|tan|asin|acos|atan|atan2|exp|expm1|log|log1p|log2|log10|pow|hypot|sinh|cosh|tanh|cbrt)\b|\*\*/;
 
 describe('sim purity', () => {
   const files = simSources(ROOT);

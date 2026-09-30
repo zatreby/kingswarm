@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kingswarm UI lab</title>
+  <link rel="icon" href="data:," />
+  <link rel="preload" href="/fonts/lilita-one.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/nunito-latin-var.woff2" as="font" type="font/woff2" crossorigin />
+  <style>
+    html, body { margin: 0; height: 100%; background: #1D3F5E; overflow: hidden; }
+    /* Static diorama screenshot stands in for the live 3D arena. */
+    #stage { position: fixed; inset: 0; background: #2B6F9E url('/shots/spike3.png') center / cover no-repeat; }
+    #ui { position: fixed; inset: 0; }
+    #labbar { position: fixed; left: 50%; bottom: 4px; transform: translateX(-50%); z-index: 99; display: none; gap: 4px; flex-wrap: wrap; justify-content: center; font: 12px system-ui; }
+    #labbar a { color: #fff; background: rgba(0,0,0,.6); padding: 2px 6px; border-radius: 4px; text-decoration: none; }
+    body.chrome #labbar { display: flex; }
+  </style>
+</head>
+<body>
+  <div id="stage"></div>
+  <div id="ui"></div>
+  <nav id="labbar"></nav>
+  <script type="module" src="./ui-lab.ts"></script>
+</body>
+</html>

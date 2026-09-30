@@ -1,6 +1,7 @@
 import { cos, rand, randRange, sin, TAU } from './math';
 import { deriveMods } from './mods';
-import { blankCritter, spawnCritter } from './spawn';
+import { birth, spawnGuard } from './mutated';
+import { blankCritter } from './spawn';
 import { tuning } from './tuning';
 import type {
   Building, BuildingKind, Hero, HeroId, MatchConfig, Obstacle, Owner, Team, TeamStats, World,
@@ -53,6 +54,7 @@ export function createWorld(config: MatchConfig): World {
     stats: [emptyStats(), emptyStats()],
     mods: [deriveMods(config.teams[0]), deriveMods(config.teams[1])],
     thrones,
+    born: [0, 0],
     events: [],
   };
 
@@ -61,14 +63,18 @@ export function createWorld(config: MatchConfig): World {
     const [sx, sy] = heroSpawnPoint(w, team);
     h.x = h.px = sx;
     h.y = h.py = sy;
-    const n = tuning.match.startSwarm + w.mods[team].startSwarmAdd;
+    const m = w.mods[team];
+    let n = tuning.match.startSwarm + m.startSwarmAdd;
+    if (m.startFull) { const cap = swarmCap(w, team); if (cap > n) n = cap; } // Big Litter
     for (let i = 0; i < n; i++) {
       const a = rand(w) * TAU;
       const d = randRange(w, 0.4, 1.3);
-      spawnCritter(w, team, h.x + cos(a) * d, h.y + sin(a) * d, 'follow');
+      birth(w, team, h.x + cos(a) * d, h.y + sin(a) * d, 'follow');
     }
+    for (let i = 0; i < m.guardCount; i++) spawnGuard(w, h); // Royal Guard
   }
   for (const b of buildings) b.hatchT = hatchInterval(b.kind) * randRange(w, 0.5, 1);
+  w.events.length = 0; // setup is not play: nothing to react to before the first step
   return w;
 }
 
@@ -108,6 +114,10 @@ function makeHero(team: Team, kind: HeroId): Hero {
     fireCd: 0,
     swingCd: 0,
     noAmmoT: 0,
+    rampageHits: 0,
+    guardT: tuning.mutations.royalGuard.replaceEvery,
+    sweepKey: -1,
+    struckBy: -1,
     spent: [],
     prev: { dash: false, ability: false, ultimate: false, recall: false, fire: false },
     kills: 0,

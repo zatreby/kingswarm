@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { idleInput, input } from '../input';
-import { bareWorld, placeHero, put, run } from '../testing';
+import { bareWorld, placeHero, put, run, runUntil } from '../testing';
 import { tuning } from '../tuning';
 import type { PlayerInput, World } from '../types';
 
@@ -119,19 +119,24 @@ describe('landing', () => {
     const bystander = put(w, 1, 12, 11, 'hold');
     bystander.stunT = 5;
     run(w, 1, blueOnly(input({ fire: true, aimX: 12, aimY: 9 })));
-    const ev = run(w, 40);
-    const land = ev.find((e) => e.type === 'land');
+    for (const c of flying(w)) c.biteCd = 5; // isolate the splash from the bite that follows it
+    const ev = runUntil(w, 'land', 40);
+    const land = ev.find((e) => e.type === 'land')!;
     expect(land).toMatchObject({ hits: 1, hitHero: false });
+    if (land.type !== 'land') throw new Error();
     expect(enemy.hp).toBe(tuning.critter.hp - F.landDamage);
     expect(bystander.hp).toBe(tuning.critter.hp);
-    expect(Math.hypot(enemy.x - 12, enemy.y - 9)).toBeGreaterThan(0.05);
+    const away = (enemy.x - land.x) * enemy.vx + (enemy.y - land.y) * enemy.vy;
+    expect(Math.hypot(enemy.vx, enemy.vy)).toBeGreaterThan(1);
+    expect(away).toBeGreaterThanOrEqual(0);
   });
 
   it('hurts the enemy King within 0.9 for 4', () => {
     const w = withFollowers(1);
     placeHero(w, 1, 12, 9);
     run(w, 1, blueOnly(input({ fire: true, aimX: 12, aimY: 9 })));
-    const ev = run(w, 40);
+    for (const c of flying(w)) c.biteCd = 5;
+    const ev = runUntil(w, 'land', 40);
     expect(ev.find((e) => e.type === 'land')).toMatchObject({ hitHero: true });
     expect(w.heroes[1].hp).toBe(w.heroes[1].maxHp - F.landHeroDamage);
   });
@@ -159,7 +164,7 @@ describe('landing', () => {
     run(w, Math.floor(F.holdTime * 60) - 30);
     expect(c.state).toBe('hold');
     expect(Math.hypot(c.x - landedAt[0], c.y - landedAt[1])).toBeLessThan(0.3);
-    run(w, 30);
+    run(w, 40);
     expect(c.state).toBe('home');
     run(w, 90);
     expect(c.state).toBe('follow');

@@ -22,6 +22,9 @@ export type MutationId =
   | 'archerHuts' | 'trample' | 'royalGuard' | 'rapidFire' | 'longArm' | 'secondWind'
   | 'chainReaction' | 'cryoBombs' | 'conscription' | 'bloodrage';
 
+/** Draft tags. A Duo Mutation is offered only once you own a Mutation of each of its two tags. */
+export type MutationTag = 'boom' | 'brood' | 'bite' | 'king';
+
 export type BuildingKind = 'throne' | 'hut' | 'tower' | 'crown';
 export type CritterKind = 'critter' | 'bomber' | 'runt' | 'brute' | 'guard';
 
@@ -84,6 +87,14 @@ export interface Hero {
   swingCd: number;
   /** Seconds until another 'noAmmo' event may be emitted (throttle). */
   noAmmoT: number;
+  /** Bloodrage: hits taken during the current Rampage. */
+  rampageHits: number;
+  /** Royal Guard: seconds until the next missing Guard is replaced (runs only while one is missing). */
+  guardT: number;
+  /** Trample: key of the current dash, so a dash crushes each critter once (see Critter.struckBy). */
+  sweepKey: number;
+  /** Piercers: key of the last piercing flight that hit this King (each flight hits him once). */
+  struckBy: number;
   /** Once-per-battle effects already spent (e.g. Second Wind). */
   spent: MutationId[];
   /** Buttons held last tick, for edge detection. */
@@ -107,6 +118,13 @@ export interface Critter {
   flightT: number; flightDur: number;
   /** Piercers fly flat in a line instead of an arc. */
   flat: boolean;
+  /**
+   * Sweeping hits (a Piercer's flight, a Trample dash) damage each target once. A sweep has a
+   * unique key (start tick x 512 + source slot); sweepKey is this critter's own flight key while it
+   * flies, struckBy the key of the last sweep that hit it. -1 = none.
+   */
+  sweepKey: number;
+  struckBy: number;
   /** Building this critter garrisons, or -1. */
   building: number;
   /** Seconds left in hold before returning. */
@@ -157,6 +175,8 @@ export interface Zone {
   team: Team;
   x: number; y: number; r: number;
   life: number; maxLife: number;
+  /** Scorch: seconds until the next burn pulse. 0 for zones that do not pulse. */
+  pulseT: number;
 }
 
 /** Static round obstacle (rocks, tree clumps, ponds). Kings and walking critters slide around it; thrown critters fly over. */
@@ -225,6 +245,33 @@ export interface TeamMods {
   /** Rate at which the dash cooldown recovers (1 = normal). */
   dashCdRate: number;
   rampageTimeMul: number;
+
+  // Behaviour rewrites (see mutations.ts for what sets each one, mutated.ts for the rules).
+  /** Bombers: every Nth critter born to this team is a Bomber (0 = never). */
+  bomberEvery: number;
+  /** Brutes: every non-Bomber critter born to this team is a Brute. */
+  brutes: boolean;
+  /** Royal Guard: Guards kept at the King's side (0 = none). */
+  guardCount: number;
+  /** Big Litter: the starting swarm is filled to the swarm cap. */
+  startFull: boolean;
+  /** Boomtown: hatch-speed multiplier while holding fewer buildings than the rival (1 = none). */
+  boomtownMul: number;
+  /** Militia: free critters garrisoned at a building on capture (0 = none). */
+  militiaGuards: number;
+  splitters: boolean;
+  chainReaction: boolean;
+  cryoBombs: boolean;
+  scorch: boolean;
+  frostbite: boolean;
+  leeches: boolean;
+  piercers: boolean;
+  homing: boolean;
+  archerHuts: boolean;
+  trample: boolean;
+  secondWind: boolean;
+  conscription: boolean;
+  bloodrage: boolean;
 }
 
 export interface TeamStats {
@@ -261,6 +308,8 @@ export interface World {
   mods: [TeamMods, TeamMods];
   /** Building index of each team's Throne. */
   thrones: [number, number];
+  /** Critters born to each team from hatching, Kingscall, the start swarm and Militia (drives the Bomber cadence). */
+  born: [number, number];
   /** Events produced by the most recent step. Cleared at the start of every step. */
   events: SimEvent[];
 }
@@ -285,6 +334,10 @@ export type SimEvent =
   | { type: 'turretPlaced'; team: Team; x: number; y: number }
   | { type: 'turretExpired'; team: Team; x: number; y: number }
   | { type: 'secondWind'; team: Team; x: number; y: number }
+  /** A critter created by a Mutation rule rather than a hatch: Splitters' Runts, Royal Guards, Militia. */
+  | { type: 'spawn'; team: Team; critter: number; kind: CritterKind; cause: 'split' | 'guard' | 'militia'; x: number; y: number }
+  /** Conscription: `count` critters of the fallen King switched to `team`. */
+  | { type: 'conscript'; team: Team; count: number; x: number; y: number }
   | { type: 'crownOpen' }
   | { type: 'overtime' }
   | { type: 'matchEnd'; winner: Team; reason: WinReason };

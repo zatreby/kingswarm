@@ -1,3 +1,4 @@
+import { MUTATION_BY_ID } from './mutations';
 import type { TeamMods, TeamSetup } from './types';
 
 export function defaultMods(): TeamMods {
@@ -20,16 +21,40 @@ export function defaultMods(): TeamMods {
     landStun: 0,
     dashCdRate: 1,
     rampageTimeMul: 1,
+    bomberEvery: 0,
+    brutes: false,
+    guardCount: 0,
+    startFull: false,
+    boomtownMul: 1,
+    militiaGuards: 0,
+    splitters: false,
+    chainReaction: false,
+    cryoBombs: false,
+    scorch: false,
+    frostbite: false,
+    leeches: false,
+    piercers: false,
+    homing: false,
+    archerHuts: false,
+    trample: false,
+    secondWind: false,
+    conscription: false,
+    bloodrage: false,
   };
 }
 
 /**
- * The seam for Mutations: turn a TeamSetup into the numbers systems consult.
- * Mutations are not implemented yet; each one becomes a case here (and, for behaviour
- * that is not a number, a flag on TeamMods read by the owning system).
+ * The seam for Mutations: turn a TeamSetup into the plain numbers and flags systems consult.
+ * Each Mutation's rewrite is its catalogue entry's `apply` (mutations.ts); duplicates count once.
  */
 export function deriveMods(setup: TeamSetup): TeamMods {
   const m = defaultMods();
   m.hatchMul = setup.hatchMul ?? 1;
+  const seen = new Set<string>();
+  for (const id of setup.mutations) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    MUTATION_BY_ID[id]?.apply(m);
+  }
   return m;
 }

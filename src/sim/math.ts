@@ -35,6 +35,10 @@ export function exp(x: number): number {
   return Math.exp(x);
 }
 
+export function log(x: number): number {
+  return Math.log(x);
+}
+
 export function len(x: number, y: number): number {
   return Math.sqrt(x * x + y * y);
 }

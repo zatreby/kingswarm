@@ -1,5 +1,16 @@
 // Every gameplay number. World units and seconds. Derived from the prototype (40 px = 1 unit),
 // adjusted for chunkier, fewer critters. Bot sims and playtests tune these; GDD holds intent.
+import type { CritterKind } from './types';
+
+/** Per-kind overrides of the base critter (tuning.critter / tuning.fire); unset = base value. */
+export interface KindTuning {
+  hp?: number;
+  speedMul?: number;
+  biteInterval?: number;
+  landRadius?: number;
+  landDamage?: number;
+  landHeroDamage?: number;
+}
 
 const TUNING = {
   hero: {
@@ -24,7 +35,8 @@ const TUNING = {
     rampageSpeedMul: 1.3,
     /** Cooldowns (dash, abilities) recover this many times faster during Rampage. */
     rampageCdMul: 2,
-    slowSpeedMul: 0.6,
+    /** Chilled (Frostbite): Kings slow less than critters. */
+    slowSpeedMul: 0.75,
   },
   fire: {
     interval: 0.13,
@@ -60,12 +72,13 @@ const TUNING = {
     /** Velocity steering rate, 1/s (prototype: 7). */
     steer: 7,
     /** Soft separation push, 1/s of overlap. */
-    separation: 8,
+    separation: 16,
     followOffsetMin: 0.5,
     followOffsetMax: 1.4,
     /** Stunned/flung critters coast; speed falls to 1/stunDrag per second. */
     stunDrag: 100,
-    slowSpeedMul: 0.5,
+    /** Chilled (Frostbite): 40% slower. */
+    slowSpeedMul: 0.6,
     /** Stop steering when this close to the target point. */
     arriveEps: 0.08,
   },
@@ -91,6 +104,41 @@ const TUNING = {
     towerHeroDamage: 5,
     /** Towers in a map half start owned by that half's team (a defended zone). */
     towersStartOwned: true,
+  },
+  /** Special critters (Mutations). Brutes: 3x HP, ~25% slower, heavy landings. */
+  kinds: {
+    bomber: {},
+    runt: { hp: 1, biteInterval: 1.4 },
+    brute: { hp: 9, speedMul: 0.75, landRadius: 1.0, landDamage: 3, landHeroDamage: 6 },
+    guard: { hp: 5 },
+  } as Record<Exclude<CritterKind, 'critter'>, KindTuning>,
+  /** Mutation numbers; the rules are in mutations.ts (numbers and flags) and mutated.ts (behaviour). */
+  mutations: {
+    bombers: { every: 4, radius: 1.5, critterDamage: 3, heroDamage: 8 },
+    shockwave: { knockMul: 2.5, stun: 0.4 },
+    scorch: { radius: 0.9, life: 3, interval: 0.5, damage: 1, maxPerTeam: 24 },
+    splitters: { runts: 2, spread: 0.2 },
+    boomtown: { hatchMul: 1.6 },
+    militia: { guards: 3, garrisonBiteMul: 2 },
+    bigLitter: { capAdd: 10 },
+    brutes: { capMul: 0.5 },
+    leeches: { heal: 2 },
+    frostbite: { slowTime: 2 },
+    /** Flat flight at `speed`; path hits within pathRadius (critters) or heroReach (King) of the line. */
+    piercers: { speed: 26, pathRadius: 0.5, critterDamage: 2, heroDamage: 4, heroReach: 0.9 },
+    homing: { radius: 2 },
+    archerHuts: { range: 3.2, interval: 0.9, critterDamage: 1, heroDamage: 3 },
+    /** reach = King radius + critter radius + bite pad. */
+    trample: { damage: 3, reach: 0.9, knock: 4, dashCdMul: 0.6 },
+    royalGuard: { count: 5, replaceEvery: 6, aggro: 2.2, offsetMin: 0.55, offsetMax: 0.95 },
+    rapidFire: { fireRateMul: 1.6, scatterMul: 1.8 },
+    longArm: { rangeMul: 1.4, flightSpeedMul: 1.25 },
+    secondWind: { hpFrac: 0.5, radius: 3, stun: 0.8, knock: 10 },
+    chainReaction: { radius: 0.9, damage: 2 },
+    cryoBombs: { freeze: 1 },
+    conscription: { radius: 4 },
+    /** Rampage ends after `hits` hits taken, but never before minTime nor after maxTime. */
+    bloodrage: { hits: 3, minTime: 8, maxTime: 25 },
   },
   match: {
     startSwarm: 10,

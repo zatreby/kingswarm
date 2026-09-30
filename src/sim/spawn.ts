@@ -1,24 +1,32 @@
 // Critter pool and state transitions shared by several systems.
+import { KIND_HP } from './kinds';
 import { cos, rand, randRange, sin, TAU } from './math';
 import { tuning } from './tuning';
-import type { Critter, CritterState, Team, World } from './types';
+import type { Critter, CritterKind, CritterState, Team, World } from './types';
 
-/** Fills the first free pool slot (index order, so deterministic). Null when the pool is full. */
-export function spawnCritter(w: World, team: Team, x: number, y: number, state: CritterState): Critter | null {
+/**
+ * Fills the first free pool slot (index order, so deterministic). Null when the pool is full.
+ * Critters "born" to a team (hatch, Kingscall, start swarm) go through birth() in mutated.ts,
+ * which picks the kind; this is the raw pool operation.
+ */
+export function spawnCritter(
+  w: World, team: Team, x: number, y: number, state: CritterState, kind: CritterKind = 'critter',
+): Critter | null {
   const pool = w.critters;
   for (let i = 0; i < pool.length; i++) {
     const c = pool[i];
     if (c.alive) continue;
     c.alive = true;
     c.team = team;
-    c.kind = 'critter';
+    c.kind = kind;
     c.state = state;
     c.x = c.px = c.sx = c.tx = x;
     c.y = c.py = c.sy = c.ty = y;
     c.vx = c.vy = 0;
-    c.hp = tuning.critter.hp * w.mods[team].critterHpMul;
+    c.hp = KIND_HP[kind] * w.mods[team].critterHpMul;
     c.flightT = c.flightDur = 0;
     c.flat = false;
+    c.sweepKey = c.struckBy = -1;
     c.building = -1;
     c.holdT = state === 'hold' ? tuning.fire.holdTime : 0;
     c.stunT = c.slowT = 0;
@@ -35,14 +43,18 @@ export function blankCritter(id: number): Critter {
   return {
     id, alive: false, team: 0, kind: 'critter', state: 'follow',
     x: 0, y: 0, px: 0, py: 0, vx: 0, vy: 0, hp: 0,
-    sx: 0, sy: 0, tx: 0, ty: 0, flightT: 0, flightDur: 0, flat: false,
+    sx: 0, sy: 0, tx: 0, ty: 0, flightT: 0, flightDur: 0, flat: false, sweepKey: -1, struckBy: -1,
     building: -1, holdT: 0, stunT: 0, slowT: 0, biteCd: 0, ox: 0, oy: 0, tint: 0,
   };
 }
 
+/** A spot in the crowd around the King; Royal Guards keep a tighter ring. */
 export function setFollowOffset(w: World, c: Critter): void {
+  const g = c.kind === 'guard';
   const a = rand(w) * TAU;
-  const d = randRange(w, tuning.critter.followOffsetMin, tuning.critter.followOffsetMax);
+  const d = g
+    ? randRange(w, tuning.mutations.royalGuard.offsetMin, tuning.mutations.royalGuard.offsetMax)
+    : randRange(w, tuning.critter.followOffsetMin, tuning.critter.followOffsetMax);
   c.ox = cos(a) * d;
   c.oy = sin(a) * d;
 }

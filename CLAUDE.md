@@ -7,6 +7,8 @@ Kingswarm is a browser game: a King hoses a swarm of critters at rivals on a low
 - `design/GDD.md` — what the game is, the pillars, the bloat guard. Any gameplay, UX or content decision must trace to it. When your brief and the GDD disagree, follow the brief and flag the conflict in your report.
 - `design/research/<topic>.md` — evidence (game feel numbers, netcode, assets, onboarding, AI, tech). Open the one your task touches.
 - `src/sim/types.ts` — the contract every layer shares.
+- `design/ART.md` — the look and sound; read before making anything visible or audible.
+- `design/STUDIO.md` — this machine's limits (7 GB RAM, `/tmp` is RAM) and the free paths; read before heavy jobs, downloads, browsers, or deciding something needs money.
 
 ## Architecture law
 

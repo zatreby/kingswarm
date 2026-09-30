@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Kingswarm render lab</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #1D3F5E; overflow: hidden; font: 600 12px/1.2 system-ui, sans-serif; }
+  #stage { position: fixed; inset: 0; }
+  #hud { position: fixed; inset: 0; pointer-events: none; }
+  .lbl { position: absolute; transform: translate(-50%, 0); color: #F6EBD0; background: rgba(27,36,48,.72); padding: 2px 6px; border-radius: 9px; white-space: nowrap; font-size: 11px; }
+  #probe { position: absolute; width: 10px; height: 10px; margin: -6px 0 0 -6px; border: 2px solid #FFD166; border-radius: 50%; display: none; }
+  #info { position: fixed; left: 8px; top: 8px; color: #F6EBD0; background: rgba(27,36,48,.72); padding: 4px 8px; border-radius: 9px; pointer-events: none; }
+  #info:empty { display: none; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div id="hud"><div id="probe"></div></div>
+<div id="info"></div>
+<script type="module" src="./render-lab.ts"></script>
+</body>
+</html>
