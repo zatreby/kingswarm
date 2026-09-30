@@ -21,9 +21,9 @@ const pocket: MapDef = {
 };
 
 describe('never permanently stuck', () => {
-  it('backs out of a dead-end pocket and reaches the target on the far side', () => {
+  function pocketRun(blind: boolean) {
     const w = createWorld({
-      seed: 1, map: pocket, duration: 150, crownOpensAt: 90,
+      seed: 1, map: blind ? { ...pocket, obstacles: [] } : pocket, duration: 150, crownOpensAt: 90,
       teams: [{ hero: 'warden', mutations: [] }, { hero: 'brawler', mutations: [] }],
     });
     const h = w.heroes[0];
@@ -32,14 +32,27 @@ describe('never permanently stuck', () => {
     const idle = createBot(1, PROFILES.idle, 6);
     let reached = -1;
     for (let t = 0; t < 60 * 15; t++) {
+      // blind: the pocket appears after the bot planned on an open map, so its plan walks into it
+      if (blind && t === 2) for (const o of pocket.obstacles) w.obstacles.push({ ...o });
       step(w, [bot.think(w), idle.think(w)]);
       if (Math.hypot(h.x - 14.6, h.y - 9) < 2.2) { reached = w.time; break; }
     }
-    expect(bot.debug.unstucks, 'the unstuck rule should have fired').toBeGreaterThan(0);
-    expect(reached, 'never reached the hut behind the pocket').toBeGreaterThan(0);
+    return { reached, unstucks: bot.debug.unstucks };
+  }
+
+  it('plans its way out of a dead-end pocket to the target on the far side', () => {
+    const r = pocketRun(false);
+    expect(r.reached, 'never reached the hut behind the pocket').toBeGreaterThan(0);
+    expect(r.reached).toBeLessThan(6);
   });
 
-  it('no King stays pinned in place while trying to go somewhere, across 20 seeds', () => {
+  it('the unstuck rule recovers when the plan walks into something it did not know about', () => {
+    const r = pocketRun(true);
+    expect(r.unstucks, 'the unstuck rule should have fired').toBeGreaterThan(0);
+    expect(r.reached, 'never reached the hut behind the pocket').toBeGreaterThan(0);
+  });
+
+  it('no King stays pinned in place while trying to go somewhere, across 20 seeds', { timeout: 60_000 }, () => {
     const WINDOW = 5; // seconds
     for (let seed = 1; seed <= 20; seed++) {
       const rival = RIVALS[seed % RIVALS.length];

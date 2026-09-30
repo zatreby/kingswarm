@@ -40,7 +40,8 @@ const KBM: Record<Verb, () => string> = {
   aim: () => mouse('none'),
   fire: () => mouse('L'),
   recall: () => key('F') + or + mouse('R'),
-  dash: () => key('Shift', true),
+  // Shift as the arrow symbol drawn in SVG (no font dependency): short enough to sit on a HUD button rim.
+  dash: () => `<span class="key key-shift"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 L17.5 10.5 H13.2 V17 H6.8 V10.5 H2.5 Z" fill="none" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/></svg></span>`,
   ability: () => key('Q'),
   ultimate: () => key('E'),
   pause: () => key('P') + or + key('Esc', true),

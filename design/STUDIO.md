@@ -23,6 +23,7 @@ This laptop is also our **minimum-spec test device**: integrated graphics, 8 GB.
 - **Parallel jobs:** at most ~4 CPU-heavy local processes at once (test runs, bot sims, encoders). Bot-sim sweeps use a worker pool of 4 or fewer. One `vite build` at a time.
 - **Dev servers:** one per agent on its own port, stopped when done (see CLAUDE.md).
 - **Local ML is off the table** for images, 3D, audio or video generation (no GPU, 7 GB RAM). `ollama` can run only small text models and is not worth the RAM while agents are working.
+- **Be a good neighbour:** the owner is using this laptop. Prefix CPU-heavy local commands with `nice -n 10` (test suites, bot sims, encoders, builds). If `uptime` shows a load average above 10, wait a minute before starting another heavy job.
 - Check before heavy work: `free -m` (keep ≥ 800 MB available) and `uptime`.
 
 ## Free paths (try these before anything paid)

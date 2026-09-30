@@ -106,6 +106,8 @@ export function buildCtx(w: World, team: Team, view: Snapshot, profile: BotProfi
 const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
 /** 1 at the King's feet, 0.5 at 8 units, 0.25 at 24. */
 const nearness = (d: number) => 1 / (1 + d / 8);
+/** A rival King this close to one of our buildings threatens it. */
+const THREAT_R = 9;
 
 export function dist(ax: number, ay: number, bx: number, by: number): number {
   return Math.hypot(ax - bx, ay - by);
@@ -160,17 +162,26 @@ export function scoreIntents(ctx: Ctx, current: Intent | null, currentAge: numbe
       const s = W.expand * buildingValue(b, false) * progress * nearness(d) * safety * (ctx.ammo < 2 ? 0.5 : 1) * grabMul;
       out.push({ kind: 'expand', target: i, score: s, reason: foeNear > 0 ? `contested (${foeNear} foes)` : 'unclaimed' });
     } else if (v.owner === team) {
-      const threat = foeNear + v.presence[foeTeam] * 0.5;
+      let threat = foeNear + v.presence[foeTeam] * 0.5;
+      // a rival King walking at it with his swarm is a threat before the first bite
+      if (view.foe.alive) {
+        const dk = dist(view.foe.x, view.foe.y, b.x, b.y);
+        if (dk < THREAT_R) threat += (4 + ctx.foeAmmo * 0.5) * (1 - dk / THREAT_R);
+      }
       if (threat <= 0) continue;
-      const urgency = 1 + (100 - v.control) / 100;
+      const isThrone = b.kind === 'throne';
+      const urgency = (1 + (100 - v.control) / 100) * (isThrone && threat >= 3 ? 2 : 1);
       const canWin = clamp01((ctx.ammo + 2) / (foeNear + 2));
+      const floor = isThrone ? 0.6 : 0.3; // the Throne is defended even against the odds
       const s = W.defend * buildingValue(b, ctx.crownOpen) * Math.pow(clamp01(threat / 5), 0.6) * urgency
-        * nearness(d) * (0.3 + 0.7 * canWin) * holdMul;
+        * nearness(d) * (floor + (1 - floor) * canWin) * holdMul;
       out.push({ kind: 'defend', target: i, score: s, reason: `under attack (${Math.round(threat)})` });
     } else {
       if (b.kind === 'crown' && ctx.crownOpen) continue;
       const isThrone = b.kind === 'throne';
       if (isThrone && !ctx.tactics.has('raidThrone')) continue;
+      // a rival whose signature play is the Throne wave only goes there through the play
+      if (isThrone && profile.plays.includes('warParty') && !overtime) continue;
       if (holdHalfVeto(ctx, b.x, b.y)) continue;
       if (!overtime && ctx.ammo < P.armyNeed * 0.25) continue; // veto: nothing to raid with
       const guard = foeNear + (foeKingNear ? ctx.foeAmmo * 0.7 + 3 : 0);
@@ -212,7 +223,8 @@ export function scoreIntents(ctx: Ctx, current: Intent | null, currentAge: numbe
     let hurt = ctx.hpFrac < 0.6 ? Math.pow((0.6 - ctx.hpFrac) / 0.6, 1.2) * 1.5 : 0;
     if (foeClose) hurt *= 1.5;
     const dry = ctx.ammo < 3 && ctx.myAway >= 5 ? 0.7 : 0;
-    const weak = ctx.power < 0.5 && foeClose ? 0.6 : 0;
+    // badly out-gunned: fall back to the Throne (it hatches fastest) instead of feeding the rival
+    const weak = ctx.power < 0.5 ? (foeClose ? 0.9 : ctx.power < 0.35 ? 0.5 : 0) : 0;
     const need = Math.max(0.08, hurt, dry, weak);
     const reason = need === hurt ? 'hurt' : need === dry ? 'out of critters' : need === weak ? 'out-gunned' : 'catching breath';
     out.push({ kind: 'regroup', target: ctx.ownThrone, score: W.regroup * need, reason });

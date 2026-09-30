@@ -157,6 +157,8 @@ function startHud(): void {
     f.recallCd = 0.8; f.recallCdMax = 3;
     f.rivalAbility = 1; f.rivalUltimate = 0.45;
     f.respawn = state === 'down' ? 3.2 - Math.min(3.1, t) : 0;
+    // Blue Throne in spike3.png sits at about (0.115, 0.64).
+    f.throneX = W() * 0.115; f.throneY = H() * 0.6;
     ui.hud.update(f);
     raf = requestAnimationFrame(tick);
   };

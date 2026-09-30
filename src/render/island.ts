@@ -70,7 +70,18 @@ export function buildIsland(kit: Kit, buildings: readonly LayoutBuilding[], obst
   group.add(cliff);
 
   // --- water: shallow glow near the shore fading to deep, plus a foam line
-  const water = new THREE.Mesh(track(waterGeometry()), track(new THREE.MeshBasicMaterial({ vertexColors: true })));
+  // Calm water: the vertex-colour depth gradient plus faint slow glints (two crossed sine fields, thresholded).
+  const waterTime = { value: 0 };
+  const waterMat = track(new THREE.MeshBasicMaterial({ vertexColors: true }));
+  waterMat.onBeforeCompile = (s) => {
+    s.uniforms.uTime = waterTime;
+    s.vertexShader = 'varying vec2 vWP;\n' + s.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvWP = position.xz;');
+    s.fragmentShader = 'uniform float uTime;\nvarying vec2 vWP;\n' + s.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+      float w = sin(vWP.x * 0.45 + uTime * 0.35 + sin(vWP.y * 0.9) * 1.8) * sin(vWP.y * 3.1 - uTime * 0.5 + sin(vWP.x * 0.3) * 2.0);
+      float fadeFar = 1.0 - smoothstep(16.0, 40.0, length(vWP * vec2(1.0, 1.6)));
+      diffuseColor.rgb += vec3(0.035, 0.055, 0.07) * smoothstep(0.86, 0.99, w) * fadeFar;`);
+  };
+  const water = new THREE.Mesh(track(waterGeometry()), waterMat);
   water.position.y = ISLAND.waterY;
   group.add(water);
   const shoreMat = track(new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false }));
@@ -147,6 +158,7 @@ export function buildIsland(kit: Kit, buildings: readonly LayoutBuilding[], obst
     update(time: number) {
       // Foam breathes slowly; ponds shimmer a touch. Cheap uniforms/scalars only.
       shoreMat.opacity = 0.85 + 0.15 * Math.sin(time * 0.8);
+      waterTime.value = time;
       for (let i = 0; i < ponds.length; i++) ponds[i].rotation.y = Math.sin(time * 0.3 + i) * 0.05;
     },
     dispose() { for (const d of disposables) d.dispose(); },

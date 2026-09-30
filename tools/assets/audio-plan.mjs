@@ -127,8 +127,8 @@ export const SOUNDS = {
     v(40, l('UI/click_002')), v(40, l('UI/click_005')), v(70, l('I/impactWood_light_003', { st: -2, lp: 1500 })) ] },
   rampage: { family: 'ability', lv: 1, why: 'power-up rise: PIZZI02 (clean scale 267>479 Hz, +10.5 st, 0.95 s) and SAX16 (317>474 Hz), each over an open_* air whoosh (attack ramps up over 143-308 ms).', variants: [
     vf(950, 150, l('J/PIZZI02'), l('UI/open_003', { db: -8 })), vf(500, 120, l('J/SAX16'), l('UI/open_002', { db: -8 })) ] },
-  second_wind: { family: 'ability', lv: 1, why: 'dramatic whoosh UP: maximize_005/004 (noise sweeps, envelope builds over 0.35-0.45 s, centroid 7-12 kHz) with spell_fire_01 / book_03 (attack 350-600 ms rising bodies).', variants: [
-    vf(900, 200, l('S/spell_fire_01'), l('UI/maximize_005', { db: -2 })), vf(950, 200, l('S/book_03', { t: 0.9 }), l('UI/maximize_004', { db: -2 })) ] },
+  second_wind: { family: 'ability', lv: 1, why: 'dramatic whoosh UP: noise sweeps whose centroid and envelope both rise (measured: maximize_005 3.3>7.6 kHz over 0.5 s, maximize_004 3.7>13.3 kHz), each under a quieter rising body (spell_fire_07 438>718 Hz, clothBelt 5.4>7.1 kHz). Cut right at the peak, short fade, so it ends "up".', variants: [
+    vf(650, 40, l('UI/maximize_005'), l('S/spell_fire_07', { db: 8 })), vf(560, 40, l('UI/maximize_004'), l('R/clothBelt', { db: 6 })) ] },
   freeze: { family: 'ability', lv: -1, why: 'icy crack: glass_004 (0.52 s, air 100 %, a shatter of noise) with impactGlass_light / heavy tink and a 21 ms glitch_004 for the initial crack.', variants: [
     vf(420, 120, l('UI/glass_004', { t: 0.42 }), l('I/impactGlass_light_002', { db: -5 })),
     vf(320, 100, l('I/impactGlass_heavy_003'), l('UI/glitch_004', { db: -3 })) ] },
@@ -178,8 +178,9 @@ export const SOUNDS = {
 };
 
 // Music ----------------------------------------------------------------------------------------
-// All RandomMind (one voice) except none: the crown loop was moved from Emma_MA's Determined
-// Pursuit (1.3 MB) to RandomMind's Battle for cohesion and the 2.6 MB budget.
+// All five tracks are RandomMind's "Medieval" set (one composer, one voice). Emma_MA's Determined
+// Pursuit (108 s, 80 bpm, 144.000 beats, LRA 4) was the research pick for the Crown, but it alone costs
+// ~1.2 MB and is a different voice, so the crown loop is a beat-cut section of RandomMind's "Battle".
 // `loop`: 'native' = the file is already a loop, keep whole; 'beat' = cut an integer number of beats
 // from a steady section and crossfade the tail into the true predecessor of the start (sample-tight
 // seam); 'none' = one-shot, trimmed and faded.

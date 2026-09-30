@@ -46,6 +46,8 @@ const STUCK_MOVE = 0.3;
 const STUCK_CHECKS = 2;
 const REPLAN_EVERY = 0.75;
 const RECALL_GAP = 2.5;
+/** Critters thrown ahead onto a building we are walking to capture. */
+const SEED_GARRISON = 2;
 const A = tuning.abilities;
 
 export class Motor {
@@ -133,7 +135,8 @@ export class Motor {
   standNear(ctx: Ctx, bi: number, fx: number, fy: number, r: number): [number, number] {
     const b = ctx.w.buildings[bi];
     const base = Math.atan2(fy - b.y, fx - b.x) + this.standTurn;
-    const nav = this.nav!;
+    if (!this.nav) this.nav = new NavGrid(ctx.w);
+    const nav = this.nav;
     for (let k = 0; k < 12; k++) {
       const off = ((k + 1) >> 1) * (Math.PI / 6) * (k % 2 ? 1 : -1);
       const x = b.x + Math.cos(base + off) * r, y = b.y + Math.sin(base + off) * r;
@@ -152,8 +155,10 @@ export class Motor {
       return [view.foe.x + ((me.x - view.foe.x) / d) * keep, view.foe.y + ((me.y - view.foe.y) / d) * keep];
     }
     if (it.target < 0) return null;
-    // kite: out-numbered at close range, back off while firing
-    if (ctx.tactics.has('kite') && view.pressing.n > ctx.followers + 3 && it.kind !== 'regroup') {
+    // kite: out-numbered at close range, back off while firing. Never off a building we must
+    // stand on: a King on his Throne (or the Crown) contests it just by being there.
+    const holdGround = it.kind === 'defend' || it.kind === 'takeCrown' || it.kind === 'regroup';
+    if (ctx.tactics.has('kite') && !holdGround && view.pressing.n > ctx.followers + 3) {
       const d = Math.max(0.01, dist(me.x, me.y, view.pressing.x, view.pressing.y));
       return [me.x + ((me.x - view.pressing.x) / d) * 3, me.y + ((me.y - view.pressing.y) / d) * 3];
     }
@@ -303,9 +308,9 @@ export class Motor {
           case 'takeCrown':
           case 'expand':
             if (foeNear > 0) { tx = v.foeX; ty = v.foeY; fire = inRange(tx, ty); }
-            else if (v.owner !== ctx.team && mine < 5 && dist(me.x, me.y, b.x, b.y) > 1.5) {
-              // seed the capture ring from range
-              tx = b.x; ty = b.y; fire = inRange(tx, ty) && ctx.followers > 3;
+            else if (v.owner !== ctx.team && mine < SEED_GARRISON && dist(me.x, me.y, b.x, b.y) > 3) {
+              // seed the capture ring from range (a few only: garrisons stay parked until recalled)
+              tx = b.x; ty = b.y; fire = inRange(tx, ty) && ctx.followers > 4;
             }
             break;
           case 'raid':
@@ -366,7 +371,7 @@ export class Motor {
       const capturing = it.target >= 0 && view.buildings[it.target].owner !== ctx.team ? ctx.myGarrison[it.target] : 0;
       const idleAway = ctx.myAway - capturing;
       const want = (it.kind === 'regroup' && ctx.myAway >= 4)
-        || (ctx.followers < 3 && idleAway >= Math.max(5, 0.4 * ctx.myTotal));
+        || (ctx.followers < 3 && idleAway >= Math.max(4, 0.3 * ctx.myTotal));
       if (want) return { button: 'recall', x: me.x, y: me.y };
     }
 

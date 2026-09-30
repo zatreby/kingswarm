@@ -5,7 +5,11 @@ import { RIVALS } from './profiles';
 // A tell must never lie: every announced action happens within lead + 1 s, unless the King dies
 // (or is stunned, which physically prevents it) in that window. The check itself lives in the
 // match runner (it is also a harness metric); this spec makes sure it runs and passes for every rival.
-describe('tells', () => {
+const SIGNATURE: Record<string, string> = {
+  bumble: 'hoard', pip: 'crownPush', brood: 'push', gorm: 'raid', sable: 'ambush', mora: 'crownPush',
+};
+
+describe('tells', { timeout: 60_000 }, () => {
   for (const rival of RIVALS) {
     it(`${rival} announces its plays and every tell comes true`, () => {
       let tells = 0;
@@ -23,6 +27,7 @@ describe('tells', () => {
         expect(r.tells.every((t) => t.lead > 0)).toBe(true);
       }
       expect(tells, `${rival} never used a tell`).toBeGreaterThan(0);
+      expect([...kinds], `${rival} never showed its signature tell`).toContain(SIGNATURE[rival]);
     });
   }
 

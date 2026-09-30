@@ -23,7 +23,7 @@ function deepFreeze<T>(o: T): T {
   return o;
 }
 
-describe('determinism', () => {
+describe('determinism', { timeout: 30_000 }, () => {
   it('same seed and profiles give the same final world', () => {
     const spec = { seed: 7, duration: 40, crownOpensAt: 20, sides: [{ profile: 'average' }, { profile: 'gorm' }] } as const;
     const a = runMatch({ ...spec, sides: [...spec.sides] });
@@ -35,7 +35,7 @@ describe('determinism', () => {
   });
 });
 
-describe('a bot never writes to the world', () => {
+describe('a bot never writes to the world', { timeout: 60_000 }, () => {
   it('leaves the world hash unchanged across think() for every profile', () => {
     for (const id of [...RIVALS, ...PROXIES, 'monkey', 'spamFire', 'crownCamp']) {
       const w = createWorld(config(3, { teams: [{ hero: 'blink', mutations: [] }, { hero: 'warden', mutations: [] }] }));

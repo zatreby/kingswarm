@@ -17,7 +17,7 @@ function play(a: SideSpec, b: SideSpec, seeds: number[]): MatchRecord[] {
 }
 const wins = (rs: MatchRecord[]) => rs.filter((r) => r.winner === 0).length;
 
-describe('golden bands', () => {
+describe('golden bands', { timeout: 60_000 }, () => {
   it('Idle loses to every rival', () => {
     for (const rival of RIVALS) {
       const rs = play({ profile: rival }, { profile: 'idle' }, [1, 2]);

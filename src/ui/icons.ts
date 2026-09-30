@@ -9,9 +9,11 @@ const FIRE = '#FF8A3D', FIRE_L = '#FFC285';
 const FROST = '#9FE8FF';
 const GOLD = '#FFD166';
 const GRASS = '#6FB04A', GREEN_L = '#CFEFA8';
-const WOOD = '#6B4526', DIRT = '#C9B27A', CLIFF = '#8A6A45';
+const WOOD = '#6B4526', DIRT = '#C9B27A';
 const STONE = '#8D97A6', STONE_L = '#C9D1DC', WALL = '#F1E4C4';
 const BOMB = '#34404F', VIOLET = '#A98BEF';
+const CRACKED = '#B8B2A2', CRACKED_D = '#7D7766';
+const ICE = '#CFF3FF', ICE_D = '#7FCFEA', SCORCHED = '#4A3B2E';
 // Rival colours follow the colour-blind setting, so they are styled through CSS variables.
 const RED_FILL = 'style="fill:var(--red)"';
 
@@ -56,6 +58,13 @@ function star(cx: number, cy: number, ro: number, ri: number, k: number, fill: s
 
 /** Coloured stroke with an ink edge (draw ink wide, colour narrow). */
 const duo = (d: string, c: string, w = 3.5) => `<path d="${d}" stroke-width="${w + 4}"/><path d="${d}" stroke="${c}" stroke-width="${w}"/>`;
+
+/** A small flame with eyes, base centred at (x, y), scaled by s. */
+const flameImp = (x: number, y: number, s: number, look: number) =>
+  `<g transform="translate(${x} ${y}) scale(${s}) translate(-32 -58)" stroke-width="${n(3.5 / s)}">`
+  + `<path d="M32 58 C15 58 9 47 11 37 C13 27 20 22 20 9 C28 15 31 21 31 27 C35 22 36 17 35 10 C47 19 55 31 53 43 C51 52 43 58 32 58 Z" fill="${FIRE}"/>`
+  + `<path d="M32 55 C25 55 22 50 23 45 C24 40 28 37 29 31 C34 36 39 41 39 46 C39 51 36 55 32 55 Z" fill="${FIRE_L}" stroke="none"/>`
+  + eyes(32, 42, 6, look, 0.2) + `</g>`;
 
 const crownPath = (x: number, y: number, s: number) => {
   const p = (a: number, b: number) => `${n(x + a * s)} ${n(y + b * s)}`;
@@ -111,9 +120,9 @@ const MUT: Record<MutationId, () => string> = {
   bombers: () => bomb(30, 38, 18) + eyes(30, 40, 4.6, 0.4) + `<path d="M30 16 C31 9 39 10 43 7"/>` + star(47, 7, 7, 3, 5, FIRE),
   shockwave: () => blob(32, 42, 10, BLUE) + duo('M18 30 Q11 41 18 52', FIRE) + duo('M46 30 Q53 41 46 52', FIRE)
     + duo('M10 24 Q1 41 10 58', FIRE) + duo('M54 24 Q63 41 54 58', FIRE) + star(32, 16, 7, 3, 4, FIRE_L),
-  scorch: () => `<ellipse cx="32" cy="53" rx="23" ry="6" fill="${CLIFF}"/>`
-    + `<path d="M32 52 C19 52 14 44 16 35 C18 27 25 23 25 11 C33 17 36 22 36 29 C39 26 40 22 40 18 C48 26 51 35 48 42 C46 48 40 52 32 52 Z" fill="${FIRE}"/>`
-    + `<path d="M32 50 C26 50 23 46 24 41 C25 36 29 33 30 27 C35 32 39 37 39 42 C39 47 36 50 32 50 Z" fill="${FIRE_L}" stroke-width="2.5"/>`,
+  // A burnt patch with two little flame imps dancing on it (Bloodrage is one big angry flame).
+  scorch: () => `<ellipse cx="32" cy="53" rx="27" ry="8" fill="${SCORCHED}"/><path d="M12 53 L16 50 M48 55 L53 52 M30 58 L35 57" stroke="${FIRE}" stroke-width="2.5"/>`
+    + flameImp(24, 53, 0.66, -0.3) + flameImp(46, 54, 0.46, 0.4),
   splitters: () => `<path d="M29 52 L29 17 C18 17 10 27 10 40 C10 48 17 52 29 52 Z" fill="${BLUE}" transform="rotate(-8 29 52)"/>`
     + `<path d="M35 52 L35 17 C46 17 54 27 54 40 C54 48 47 52 35 52 Z" fill="${BLUE}" transform="rotate(8 35 52)"/>`
     + `<circle cx="20" cy="33" r="4.4" fill="#fff" stroke-width="2"/><circle cx="21.5" cy="33.5" r="2.2" fill="${INK}" stroke="none"/>`
@@ -127,7 +136,9 @@ const MUT: Record<MutationId, () => string> = {
   brutes: () => blob(28, 36, 21, BLUE, { brows: true, look: 0.4 }) + blob(55, 52, 6, BLUE, { look: -0.6 }),
   leeches: () => heartPath('#FF8FA0') + `<path d="M32 26 V42 M24 34 H40" stroke="#fff" stroke-width="5"/>`
     + `<path d="M43 5 L58 5 L52 19 Z" fill="#fff"/>`,
-  frostbite: () => snowflake(32, 32, 25, 4),
+  // An ice critter with fangs: a bite that chills.
+  frostbite: () => snowflake(52, 12, 9, 2.5) + blob(28, 38, 21, ICE, { brows: true, look: 0.3 })
+    + `<path d="M17 47 Q28 52 39 47" stroke-width="3"/><path d="M20 47.8 L23.5 56 L27 49.6 Z M29 49.6 L32.5 56 L36 47.8 Z" fill="#fff" stroke-width="2.5"/>`,
   piercers: () => `<g ${RED_FILL}>` + [16, 32, 48].map(x => blob(x, 36, 8, '', { red: true, tuft: true, look: -0.5 })).join('') + `</g>`
     + duo('M4 36 L55 36', STONE_L, 4) + `<path d="M50 27 L62 36 L50 45 Z" fill="${STONE_L}"/>` + `<path d="M4 30 L9 36 L4 42" stroke-width="3"/>`,
   homing: () => `<path d="M12 52 C10 30 26 44 34 28 C38 20 40 20 42 20" stroke-dasharray="5 6"/>`
@@ -140,7 +151,9 @@ const MUT: Record<MutationId, () => string> = {
     + `<path d="M4 24 H18 M8 33 H22 M4 42 H18"/>`,
   royalGuard: () => `<path d="M32 5 L55 12 V30 C55 45 45 53 32 60 C19 53 9 45 9 30 V12 Z" fill="${STONE_L}"/>`
     + `<path d="M32 12 V53" stroke="${STONE}" stroke-width="3"/>` + crownPath(32, 33, 1.05),
-  rapidFire: () => duo('M8 16 L22 32 L8 48', BLUE_L, 5) + duo('M24 16 L38 32 L24 48', BLUE, 5) + duo('M40 16 L54 32 L40 48', '#1F7FD6', 5),
+  // A volley of critters in flight, each trailing speed lines.
+  rapidFire: () => `<path d="M4 15 H26 M10 22 H28 M4 36 H20 M8 43 H22 M2 54 H10" stroke-width="3"/>`
+    + blob(46, 17, 9, BLUE, { look: 0.9 }) + blob(36, 39, 9, BLUE, { look: 0.9 }) + blob(20, 53, 7, BLUE, { look: 0.9 }),
   longArm: () => `<ellipse cx="53" cy="54" rx="9" ry="4" fill="${DIRT}"/><path d="M50 52 L56 56 M56 52 L50 56" stroke-width="2.5"/>`
     + `<path d="M6 56 C14 10 40 6 51 46" stroke-width="3" stroke-dasharray="4 5"/>` + `<path d="M44 42 L52 50 L56 38 Z" fill="${INK}"/>`
     + blob(24, 22, 10, BLUE, { look: 0.8 }) + `<path d="M8 62 H40" stroke-width="3"/><path d="M4 62 L10 58 M4 62 L10 66" stroke-width="3"/>`,
@@ -148,7 +161,11 @@ const MUT: Record<MutationId, () => string> = {
     + `<g transform="translate(32 34) scale(.58) translate(-32 -32)">${heartPath('#FF8FA0')}</g>` + `<path d="M26 34 H38" stroke="#fff" stroke-width="3.5"/>`,
   chainReaction: () => `<ellipse cx="23" cy="36" rx="6" ry="3.5" transform="rotate(-50 23 36)" stroke-width="3"/><ellipse cx="41" cy="36" rx="6" ry="3.5" transform="rotate(50 41 36)" stroke-width="3"/>`
     + star(12, 48, 11, 5, 7, FIRE) + star(32, 20, 13, 6, 8, FIRE) + star(52, 48, 11, 5, 7, FIRE) + star(32, 20, 5, 2.5, 4, FIRE_L),
-  cryoBombs: () => bomb(28, 40, 18, '#2F5D7A') + eyes(28, 42, 4.4, 0.3) + `<path d="M28 18 C29 11 36 12 40 9"/>` + snowflake(48, 11, 10, 2.5),
+  // Ice-blue, frosted and spiky: a different silhouette and colour from Bombers' dark round bomb.
+  cryoBombs: () => `<path d="M17 40 L6 13 L25 29 Z" fill="${ICE}"/><path d="M47 40 L59 12 L39 29 Z" fill="${ICE}"/>`
+    + `<circle cx="32" cy="41" r="18" fill="${ICE_D}"/>`
+    + `<path d="M15 36 C17 27 24 23 32 23 C40 23 47 27 49 36 C46 38 44 33 41 37 C38 40 36 34 32 38 C28 41 26 34 23 37 C20 39 18 34 15 36 Z" fill="#fff" stroke-width="2.5"/>`
+    + eyes(32, 45, 4.4, 0.2) + `<path d="M32 23 V16"/>` + snowflake(32, 10, 7.5, 2.2),
   conscription: () => blob(15, 42, 11, '', { red: true, tuft: true, look: 0.6 }) + blob(49, 42, 11, BLUE, { look: -0.6 })
     + `<path d="M16 22 Q32 6 46 20"/><path d="M40 21 L48 23 L47 14 Z" fill="${INK}"/>`,
   bloodrage: () => `<path d="M32 58 C15 58 9 47 11 37 C13 27 20 22 20 9 C28 15 31 21 31 27 C35 22 36 17 35 10 C47 19 55 31 53 43 C51 52 43 58 32 58 Z" fill="${FIRE}"/>`
@@ -189,7 +206,11 @@ const TRAIT: Record<TraitIcon, () => string> = {
 
 const ABILITY: Record<AbilityIcon, () => string> = {
   stomp: () => `<path d="M23 5 H41 V25 H51 L32 44 L13 25 H23 Z" fill="${BLUE_L}"/><ellipse cx="32" cy="53" rx="24" ry="6" fill="${DIRT}"/><path d="M4 40 L10 44 M60 40 L54 44"/>`,
-  kingscall: () => `<path d="M6 27 H16 L44 12 V52 L16 37 H6 Z" fill="${DIRT}"/><path d="M50 22 Q56 32 50 42 M56 16 Q64 32 56 48"/>`,
+  // A war horn with critters bursting out of the bell.
+  kingscall: () => `<path d="M6.4 50.1 Q20 40 33.1 17.5 L46.9 34.5 Q24 44 9.6 53.9 Z" fill="${GOLD}"/>`
+    + `<ellipse cx="40" cy="26" rx="11" ry="4.2" transform="rotate(50.9 40 26)" fill="${WOOD}"/>`
+    + `<path d="M40 8 L42 3 M50 22 L56 20 M48 44 L53 47" stroke-width="3"/>`
+    + blob(51, 12, 6.5, BLUE, { look: 0.8 }) + blob(57, 32, 5.5, BLUE, { look: 0.8 }),
   blink: () => `<circle cx="17" cy="42" r="11" stroke-dasharray="4 5"/>` + `<path d="M44 6 C45 18 47 22 58 24 C47 26 45 30 44 42 C43 30 41 26 30 24 C41 22 43 18 44 6 Z" fill="${FROST}"/>`
     + `<path d="M22 36 Q32 30 36 30" stroke-dasharray="3 4"/>`,
   vortex: () => `<path d="${spiral(32, 32)}" stroke-width="4"/>`,
@@ -228,8 +249,12 @@ const PICTO = {
   next: () => svg(`<path d="M24 12 L44 32 L24 52" stroke-width="7"/>`),
   question: () => svg(blob(32, 38, 22, '#B7AE98', { eyes: false }) + `<path d="M25 30 Q25 20 32 20 Q40 20 40 28 Q40 33 32 36 V41" stroke-width="4.5"/><circle cx="32" cy="49" r="2.8" fill="${INK}" stroke="none"/>`),
   confetti: () => svg(star(32, 32, 20, 9, 5, GOLD)),
-  brokenCrown: () => svg(`<g transform="translate(-3 3) rotate(-9 20 48)"><path d="M9.6 48.8 L6.4 23.2 L20.8 34.4 L32 16.8 L29 26 L34 34 L30 42 L32 48.8 Z" fill="${GOLD}"/></g>`
-    + `<g transform="translate(3 5) rotate(10 44 48)"><path d="M32 16.8 L43.2 34.4 L57.6 23.2 L54.4 48.8 L32 48.8 L30 42 L34 34 L29 26 Z" fill="${GOLD}"/></g>`),
+  // One lost life: a single grey crown, tipped over, with a jagged crack, a chipped right tip and an empty
+  // jewel socket. It must read as ONE object next to gold crowns (never as two halves).
+  brokenCrown: () => svg(`<g transform="rotate(-10 32 44)">`
+    + `<path d="M9.6 48.8 L6.4 23.2 L20.8 34.4 L32 16.8 L43.2 34.4 L50.5 28.7 L52.6 32.6 L56.4 29.8 L54.4 48.8 Z" fill="${CRACKED}"/>`
+    + `<path d="M31 18.5 L35 27 L29.5 33 L34.5 40 L30.5 48.8" stroke-width="2.6"/>`
+    + `<circle cx="20" cy="42" r="3" fill="${CRACKED_D}" stroke-width="2"/></g>`),
   vs: () => svg(`<circle cx="32" cy="32" r="26" fill="${INK}"/>`),
 } as const;
 export type PictoId = keyof typeof PICTO;

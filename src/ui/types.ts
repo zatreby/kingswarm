@@ -283,6 +283,8 @@ export interface HudFrame {
   rivalAbility: number; rivalUltimate: number;
   /** Seconds until your King respawns, 0 while alive. */
   respawn: number;
+  /** Screen position of your Throne (where the King respawns); the "back in N" chip sits over it. NaN = top-centre fallback. */
+  throneX: number; throneY: number;
 }
 
 export interface HintPrompt {
@@ -328,6 +330,6 @@ export function newHudFrame(): HudFrame {
     swarmX: NaN, swarmY: NaN, swarmWith: 0, swarmCap: 0, swarmAway: 0,
     youX: NaN, youY: NaN, rivalX: NaN, rivalY: NaN,
     abilityCd: 0, abilityCdMax: 1, ultimateCd: 0, ultimateCdMax: 1, dashCd: 0, dashCdMax: 1, recallCd: 0, recallCdMax: 1,
-    rivalAbility: 1, rivalUltimate: 1, respawn: 0,
+    rivalAbility: 1, rivalUltimate: 1, respawn: 0, throneX: NaN, throneY: NaN,
   };
 }

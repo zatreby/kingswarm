@@ -3,7 +3,8 @@
 // fetch `${import.meta.env.BASE_URL}${file}`. Files are mono 44.1 kHz OGG Vorbis (SFX) / stereo (music).
 //
 // Levels are baked into the files: each family was normalised to a momentary-max loudness so small
-// critter sounds sit 7-10 dB under king/ability/building sounds and stings (see FAMILY_LEVELS).
+// critter sounds sit about 6-10 dB under king sounds and stings (FAMILY_LEVELS; thuds are peak-limited, so
+// building/ability sounds land 2-4 dB under their targets, see audio-verify.mjs for the achieved numbers).
 // `gain` is a linear trim ON TOP of that (1 = as built). Music is -18 LUFS integrated, TP < -1.5 dB.
 //
 // pitchVar is a random pitch spread of +/- that many semitones per play (playbackRate = 2^(x/12)).
